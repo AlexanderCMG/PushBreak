@@ -1,14 +1,533 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Colorful rock.txt</title>
-    <link rel="stylesheet" href="index.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Typing Experiment</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            color: #e2b714;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 2rem;
+            background: linear-gradient(45deg, #e2b714, #f39c12);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(226, 183, 20, 0.3);
+        }
+
+        .setup-screen {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 40px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 183, 20, 0.2);
+        }
+
+        .input-group {
+            margin-bottom: 30px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+            color: #e2b714;
+        }
+
+        .input-group input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(226, 183, 20, 0.3);
+            border-radius: 8px;
+            padding: 15px 20px;
+            font-size: 1.1rem;
+            color: #e2b714;
+            width: 200px;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #e2b714;
+            box-shadow: 0 0 20px rgba(226, 183, 20, 0.3);
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #e2b714, #f39c12);
+            border: none;
+            border-radius: 10px;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #1a1a2e;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Courier New', monospace;
+            margin: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(226, 183, 20, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-stop {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            color: white;
+        }
+
+        .experiment-screen {
+            display: none;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 30px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #e2b714;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #bbb;
+            margin-top: 5px;
+        }
+
+        .passage-container {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 183, 20, 0.2);
+            line-height: 1.8;
+            font-size: 1.1rem;
+            text-align: left;
+        }
+
+        .passage-text {
+            margin-bottom: 20px;
+            user-select: none;
+        }
+
+        .char {
+            position: relative;
+        }
+
+        .char.correct {
+            background-color: rgba(34, 197, 94, 0.3);
+            color: #22c55e;
+        }
+
+        .char.incorrect {
+            background-color: rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+        }
+
+        .char.current {
+            background-color: rgba(226, 183, 20, 0.5);
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+
+        .input-area {
+            width: 100%;
+            min-height: 150px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(226, 183, 20, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            font-size: 1.1rem;
+            color: #e2b714;
+            font-family: 'Courier New', monospace;
+            line-height: 1.8;
+            resize: none;
+        }
+
+        .input-area:focus {
+            outline: none;
+            border-color: #e2b714;
+            box-shadow: 0 0 20px rgba(226, 183, 20, 0.3);
+        }
+
+        .break-screen {
+            display: none;
+            text-align: center;
+        }
+
+        .break-timer {
+            font-size: 4rem;
+            font-weight: bold;
+            color: #e2b714;
+            margin: 30px 0;
+            text-shadow: 0 0 30px rgba(226, 183, 20, 0.5);
+        }
+
+        .completion-screen {
+            display: none;
+            text-align: center;
+        }
+
+        .completion-message {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 40px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 183, 20, 0.2);
+            margin-bottom: 30px;
+        }
+
+        .completion-message h2 {
+            color: #e2b714;
+            margin-bottom: 20px;
+            font-size: 2rem;
+        }
+
+        .completion-message p {
+            color: #bbb;
+            font-size: 1.2rem;
+            line-height: 1.6;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .highlight-purple { background-color: purple; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold; }
+        .highlight-brown { background-color: brown; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold; }
+        .highlight-green { background-color: green; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold; }
+        .highlight-white { background-color: white; color: black; padding: 2px 4px; border-radius: 3px; font-weight: bold; }
+        .highlight-orange { background-color: orange; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold; }
+        .highlight-pink { background-color: pink; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold; }
+        .highlight-blue { background-color: blue; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold; }
+        .highlight-black { background-color: black; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold; }
+        .highlight-yellow { background-color: yellow; color: black; padding: 2px 4px; border-radius: 3px; font-weight: bold; }
+        .highlight-red { background-color: red; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold; }
+        .highlight-silver { background-color: silver; color: black; padding: 2px 4px; border-radius: 3px; font-weight: bold; }
+    </style>
 </head>
 <body>
     <div class="container">
-        <h1>Colorful rock.txt</h1>
-        <p>Jake slammed his fingers across the <span style="background-color: purple; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold;">black</span> keys of his guitar, the <span style="background-color: brown; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold;">red</span> stage lights blazzing overhead as <span style="background-color: purple; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold;">purple</span> smoke billowed from the machines behind him. The crowd was absolutly electric tonight, screaming for more as sweat dripped from his forhead. He had dreamed of this moment since he was twelve years old, practicing in his parent's garage until the neigbors would complain.</p><p>The <span style="background-color: green; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold;">blue</span> spotlight found him in the darkniss, illuminating his <span style="background-color: green; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold;">silver</span> chains and the <span style="background-color: green; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold;">green</span> dragon tattoo that coiled around his left arm. His voice echoed through the massive amplifires, each note carring the raw emotion he had poured into his music for years. The audience swayed like ocean waves, completly mesmerized by the power flowing from the stage.</p><p>Behind him, the drummer pounded out a ryhthm on his <span style="background-color: green; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold;">white</span> drum kit while <span style="background-color: white; color: black; padding: 2px 4px; border-radius: 3px; font-weight: bold;">orange</span> flames shot up from the stage floor, creating <span style="background-color: brown; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold;">yellow</span> shadows that danced accross the packed arena. Jake's guitar solo reached its cressendo, his fingers moving so fast they were barely visable to the naked eye. This was what he lived for – the pure adrenalin rush of performing for thousands of devoted fans.</p><p>The <span style="background-color: orange; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold;">red</span> curtains parted to reveel his backup singers, their <span style="background-color: pink; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold;">blue</span> sequined dresses sparkling under the bright <span style="background-color: brown; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold;">white</span> stage lites that swept across the venue. The bass line thumped through everyone's chest, making hearts beat in perfect rythm with the music. Jake had fought for years to reach this level of success, facing rejection after rejection from record lables who didn't understand his vision.</p><p><span style="background-color: blue; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold;">Purple</span> bannars hung from the ceiling while <span style="background-color: orange; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold;">green</span> laser beams cut through the thick <span style="background-color: purple; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold;">yellow</span> haze that filled the concert hall. His manager had warned him that tonite's performance would make or brake his career, but Jake felt nothing but confidence flowing through his vains. The energy from the crowd was intoxicating, feeding his soul and pushing him to deliever the performance of a lifetime.</p><p>The final song began with a haunting melody played on <span style="background-color: orange; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold;">black</span> piano keyz, soon joined by <span style="background-color: white; color: black; padding: 2px 4px; border-radius: 3px; font-weight: bold;">orange</span> guitar riffs that built to an explozive climax under the <span style="background-color: orange; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold;">red</span> spotlights. Every person in the arena sang along to the chorus, their voices creating a wall of sound that gave Jake chils. He had written this song in his darkest moment, never imagining it would become his signiture hit.</p><p>As the show ended, <span style="background-color: purple; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold;">blue</span> confetti rained down from the ceiling while <span style="background-color: black; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold;">white</span> stroab lights flashed in perfect synchronizaton with the final notes. The <span style="background-color: brown; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold;">purple</span> stage smoke slowly cleared, reveeling Jake standing triumphant with his <span style="background-color: orange; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold;">green</span> guitar held high above his head. The applause was deffening, a thunderous roar that seemed to shake the very foundatons of the building.</p><p>Walking off stage, Jake knew his life would never be the same. The <span style="background-color: white; color: black; padding: 2px 4px; border-radius: 3px; font-weight: bold;">yellow</span> backstage lites seemed dim compared to the brillance he had just experienced, but the <span style="background-color: pink; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold;">red</span> exit sighn ahead promised new adventures and even greater stages to conqure. He had proven tonight that he wasn't just another musician – he was a true rock star destined for greatnes.</p>
+        <div class="logo">TypingLab</div>
+
+        <!-- Setup Screen -->
+        <div id="setupScreen" class="setup-screen">
+            <div class="input-group">
+                <label for="sessionDuration">Session Duration (minutes):</label>
+                <input type="number" id="sessionDuration" value="2" min="1" max="30">
+            </div>
+            <button class="btn" onclick="startExperiment()">Start Experiment</button>
+        </div>
+
+        <!-- Experiment Screen -->
+        <div id="experimentScreen" class="experiment-screen">
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-value" id="wpm">0</div>
+                    <div class="stat-label">WPM</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="accuracy">100%</div>
+                    <div class="stat-label">Accuracy</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="timer">0:00</div>
+                    <div class="stat-label">Time Left</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="currentSession">1</div>
+                    <div class="stat-label">Session</div>
+                </div>
+            </div>
+
+            <div class="passage-container">
+                <div id="passageText" class="passage-text"></div>
+                <textarea id="inputArea" class="input-area" placeholder="Start typing here..." autocomplete="off" spellcheck="false"></textarea>
+            </div>
+
+            <button class="btn btn-stop" onclick="stopExperiment()">Stop Experiment</button>
+        </div>
+
+        <!-- Break Screen -->
+        <div id="breakScreen" class="break-screen">
+            <h2>Take a 30-second break</h2>
+            <div class="break-timer" id="breakTimer">30</div>
+            <p>Get ready for the next session...</p>
+        </div>
+
+        <!-- Completion Screen -->
+        <div id="completionScreen" class="completion-screen">
+            <div class="completion-message">
+                <h2>Thank you for participating!</h2>
+                <p>The experiment has been completed successfully.<br>
+                Your data has been recorded.<br><br>
+                You may now close this window.</p>
+            </div>
+            <button class="btn" onclick="resetExperiment()">Start New Experiment</button>
+        </div>
     </div>
-    <script src="index.js"></script>
+
+    <script>
+        // Sample passages - in real implementation, these would come from text files
+        const passages = [
+            `Jake slammed his fingers across the <span class="highlight-purple">black</span> keys of his guitar, the <span class="highlight-brown">red</span> stage lights blazzing overhead as <span class="highlight-purple">purple</span> smoke billowed from the machines behind him. The crowd was absolutly electric tonight, screaming for more as sweat dripped from his forhead. He had dreamed of this moment since he was twelve years old, practicing in his parent's garage until the neigbors would complain.`,
+            
+            `The <span class="highlight-green">blue</span> spotlight found him in the darkniss, illuminating his <span class="highlight-green">silver</span> chains and the <span class="highlight-green">green</span> dragon tattoo that coiled around his left arm. His voice echoed through the massive amplifires, each note carring the raw emotion he had poured into his music for years. The audience swayed like ocean waves, completly mesmerized by the power flowing from the stage.`,
+            
+            `Behind him, the drummer pounded out a ryhthm on his <span class="highlight-green">white</span> drum kit while <span class="highlight-white">orange</span> flames shot up from the stage floor, creating <span class="highlight-brown">yellow</span> shadows that danced accross the packed arena. Jake's guitar solo reached its cressendo, his fingers moving so fast they were barely visable to the naked eye. This was what he lived for – the pure adrenalin rush of performing for thousands of devoted fans.`,
+            
+            `The <span class="highlight-orange">red</span> curtains parted to reveel his backup singers, their <span class="highlight-pink">blue</span> sequined dresses sparkling under the bright <span class="highlight-brown">white</span> stage lites that swept across the venue. The bass line thumped through everyone's chest, making hearts beat in perfect rythm with the music. Jake had fought for years to reach this level of success, facing rejection after rejection from record lables who didn't understand his vision.`
+        ];
+
+        let currentPassage = '';
+        let currentPosition = 0;
+        let sessionDuration = 2; // minutes
+        let currentSession = 1;
+        let sessionStartTime = 0;
+        let sessionTimer = null;
+        let breakTimer = null;
+        let experimentData = [];
+        let isExperimentActive = false;
+        let totalTypedChars = 0;
+        let correctChars = 0;
+
+        function getRandomPassage() {
+            return passages[Math.floor(Math.random() * passages.length)];
+        }
+
+        function stripHTML(html) {
+            const temp = document.createElement('div');
+            temp.innerHTML = html;
+            return temp.textContent || temp.innerText || '';
+        }
+
+        function startExperiment() {
+            sessionDuration = parseInt(document.getElementById('sessionDuration').value);
+            if (sessionDuration < 1) {
+                alert('Please enter a valid duration (at least 1 minute)');
+                return;
+            }
+
+            document.getElementById('setupScreen').style.display = 'none';
+            document.getElementById('experimentScreen').style.display = 'block';
+            
+            isExperimentActive = true;
+            currentSession = 1;
+            experimentData = [];
+            
+            startSession();
+        }
+
+        function startSession() {
+            currentPassage = getRandomPassage();
+            currentPosition = 0;
+            totalTypedChars = 0;
+            correctChars = 0;
+            
+            displayPassage();
+            
+            const inputArea = document.getElementById('inputArea');
+            inputArea.value = '';
+            inputArea.focus();
+            
+            sessionStartTime = Date.now();
+            updateTimer();
+            
+            sessionTimer = setInterval(() => {
+                updateTimer();
+                updateStats();
+            }, 1000);
+            
+            setTimeout(() => {
+                endSession();
+            }, sessionDuration * 60 * 1000);
+        }
+
+        function displayPassage() {
+            const passageElement = document.getElementById('passageText');
+            const plainText = stripHTML(currentPassage);
+            let displayText = '';
+            
+            for (let i = 0; i < plainText.length; i++) {
+                let className = '';
+                if (i < currentPosition) {
+                    className = correctChars > i ? 'correct' : 'incorrect';
+                } else if (i === currentPosition) {
+                    className = 'current';
+                }
+                displayText += `<span class="char ${className}">${plainText[i] === ' ' ? '&nbsp;' : plainText[i]}</span>`;
+            }
+            
+            passageElement.innerHTML = displayText;
+        }
+
+        function updateTimer() {
+            const elapsed = (Date.now() - sessionStartTime) / 1000;
+            const remaining = Math.max(0, (sessionDuration * 60) - elapsed);
+            const minutes = Math.floor(remaining / 60);
+            const seconds = Math.floor(remaining % 60);
+            document.getElementById('timer').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function updateStats() {
+            const inputText = document.getElementById('inputArea').value;
+            const plainPassage = stripHTML(currentPassage);
+            
+            totalTypedChars = inputText.length;
+            correctChars = 0;
+            
+            for (let i = 0; i < Math.min(inputText.length, plainPassage.length); i++) {
+                if (inputText[i] === plainPassage[i]) {
+                    correctChars++;
+                }
+            }
+            
+            const elapsed = (Date.now() - sessionStartTime) / 1000 / 60; // minutes
+            const wpm = Math.round((correctChars / 5) / Math.max(elapsed, 0.1));
+            const accuracy = totalTypedChars > 0 ? Math.round((correctChars / totalTypedChars) * 100) : 100;
+            
+            document.getElementById('wpm').textContent = wpm;
+            document.getElementById('accuracy').textContent = accuracy + '%';
+            document.getElementById('currentSession').textContent = currentSession;
+            
+            currentPosition = inputText.length;
+            displayPassage();
+        }
+
+        function endSession() {
+            if (!isExperimentActive) return;
+            
+            clearInterval(sessionTimer);
+            
+            // Record session data
+            const elapsed = (Date.now() - sessionStartTime) / 1000 / 60;
+            const wpm = Math.round((correctChars / 5) / Math.max(elapsed, 0.1));
+            const accuracy = totalTypedChars > 0 ? Math.round((correctChars / totalTypedChars) * 100) : 100;
+            
+            experimentData.push({
+                session: currentSession,
+                wpm: wpm,
+                accuracy: accuracy,
+                passage: stripHTML(currentPassage),
+                typedText: document.getElementById('inputArea').value,
+                duration: sessionDuration,
+                totalChars: totalTypedChars,
+                correctChars: correctChars
+            });
+            
+            if (currentSession < 3) { // Continue for multiple sessions
+                startBreak();
+            } else {
+                showCompletion();
+            }
+        }
+
+        function startBreak() {
+            document.getElementById('experimentScreen').style.display = 'none';
+            document.getElementById('breakScreen').style.display = 'block';
+            
+            let breakTime = 30;
+            document.getElementById('breakTimer').textContent = breakTime;
+            
+            breakTimer = setInterval(() => {
+                breakTime--;
+                document.getElementById('breakTimer').textContent = breakTime;
+                
+                if (breakTime <= 0) {
+                    clearInterval(breakTimer);
+                    document.getElementById('breakScreen').style.display = 'none';
+                    document.getElementById('experimentScreen').style.display = 'block';
+                    currentSession++;
+                    startSession();
+                }
+            }, 1000);
+        }
+
+        function showCompletion() {
+            isExperimentActive = false;
+            document.getElementById('experimentScreen').style.display = 'none';
+            document.getElementById('completionScreen').style.display = 'block';
+            
+            // Save data to CSV file
+            saveDataToCSV();
+        }
+
+
+        function stopExperiment() {
+            isExperimentActive = false;
+            clearInterval(sessionTimer);
+            clearInterval(breakTimer);
+            showCompletion();
+        }
+
+        function resetExperiment() {
+            document.getElementById('resultsScreen').style.display = 'none';
+            document.getElementById('breakScreen').style.display = 'none';
+            document.getElementById('experimentScreen').style.display = 'none';
+            document.getElementById('setupScreen').style.display = 'block';
+            
+            currentSession = 1;
+            experimentData = [];
+            isExperimentActive = false;
+        }
+
+        // Event listeners
+        document.getElementById('inputArea').addEventListener('input', updateStats);
+        
+        document.getElementById('inputArea').addEventListener('keydown', function(e) {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+            }
+        });
+
+        // Initialize
+        document.getElementById('setupScreen').style.display = 'block';
+    </script>
 </body>
 </html>
