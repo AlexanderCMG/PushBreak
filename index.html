@@ -4,258 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Typing Experiment</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Courier New', monospace;
-            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
-            color: #e2b714;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1000px;
-            width: 100%;
-            text-align: center;
-        }
-
-        .logo {
-            font-size: 3rem;
-            font-weight: bold;
-            margin-bottom: 2rem;
-            background: linear-gradient(45deg, #e2b714, #f39c12);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 30px rgba(226, 183, 20, 0.3);
-        }
-
-        .setup-screen {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 15px;
-            padding: 40px;
-            margin-bottom: 30px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(226, 183, 20, 0.2);
-        }
-
-        .input-group {
-            margin-bottom: 30px;
-        }
-
-        .input-group label {
-            display: block;
-            margin-bottom: 10px;
-            font-size: 1.2rem;
-            color: #e2b714;
-        }
-
-        .input-group input {
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(226, 183, 20, 0.3);
-            border-radius: 8px;
-            padding: 15px 20px;
-            font-size: 1.1rem;
-            color: #e2b714;
-            width: 200px;
-            text-align: center;
-            font-family: 'Courier New', monospace;
-        }
-
-        .input-group input:focus {
-            outline: none;
-            border-color: #e2b714;
-            box-shadow: 0 0 20px rgba(226, 183, 20, 0.3);
-        }
-
-        .btn {
-            background: linear-gradient(45deg, #e2b714, #f39c12);
-            border: none;
-            border-radius: 10px;
-            padding: 15px 30px;
-            font-size: 1.2rem;
-            font-weight: bold;
-            color: #1a1a2e;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-family: 'Courier New', monospace;
-            margin: 10px;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(226, 183, 20, 0.4);
-        }
-
-        .btn:active {
-            transform: translateY(0);
-        }
-
-        .btn-stop {
-            background: linear-gradient(45deg, #e74c3c, #c0392b);
-            color: white;
-        }
-
-        .experiment-screen {
-            display: none;
-        }
-
-        .stats {
-            display: flex;
-            justify-content: space-around;
-            margin-bottom: 30px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 10px;
-            padding: 20px;
-            backdrop-filter: blur(10px);
-        }
-
-        .stat {
-            text-align: center;
-        }
-
-        .stat-value {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #e2b714;
-        }
-
-        .stat-label {
-            font-size: 0.9rem;
-            color: #bbb;
-            margin-top: 5px;
-        }
-
-        .passage-container {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 15px;
-            padding: 30px;
-            margin-bottom: 20px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(226, 183, 20, 0.2);
-            line-height: 1.8;
-            font-size: 1.1rem;
-            text-align: left;
-        }
-
-        .passage-text {
-            margin-bottom: 20px;
-            user-select: none;
-        }
-
-        .char {
-            position: relative;
-        }
-
-        .char.correct {
-            background-color: rgba(34, 197, 94, 0.3);
-            color: #22c55e;
-        }
-
-        .char.incorrect {
-            background-color: rgba(239, 68, 68, 0.3);
-            color: #ef4444;
-        }
-
-        .char.current {
-            background-color: rgba(226, 183, 20, 0.5);
-            animation: blink 1s infinite;
-        }
-
-        @keyframes blink {
-            0%, 50% { opacity: 1; }
-            51%, 100% { opacity: 0.3; }
-        }
-
-        .input-area {
-            width: 100%;
-            min-height: 150px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(226, 183, 20, 0.3);
-            border-radius: 10px;
-            padding: 20px;
-            font-size: 1.1rem;
-            color: #e2b714;
-            font-family: 'Courier New', monospace;
-            line-height: 1.8;
-            resize: none;
-        }
-
-        .input-area:focus {
-            outline: none;
-            border-color: #e2b714;
-            box-shadow: 0 0 20px rgba(226, 183, 20, 0.3);
-        }
-
-        .break-screen {
-            display: none;
-            text-align: center;
-        }
-
-        .break-timer {
-            font-size: 4rem;
-            font-weight: bold;
-            color: #e2b714;
-            margin: 30px 0;
-            text-shadow: 0 0 30px rgba(226, 183, 20, 0.5);
-        }
-
-        .completion-screen {
-            display: none;
-            text-align: center;
-        }
-
-        .completion-message {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 15px;
-            padding: 40px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(226, 183, 20, 0.2);
-            margin-bottom: 30px;
-        }
-
-        .completion-message h2 {
-            color: #e2b714;
-            margin-bottom: 20px;
-            font-size: 2rem;
-        }
-
-        .completion-message p {
-            color: #bbb;
-            font-size: 1.2rem;
-            line-height: 1.6;
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
-        .highlight-purple { background-color: purple; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold; }
-        .highlight-brown { background-color: brown; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold; }
-        .highlight-green { background-color: green; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold; }
-        .highlight-white { background-color: white; color: black; padding: 2px 4px; border-radius: 3px; font-weight: bold; }
-        .highlight-orange { background-color: orange; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold; }
-        .highlight-pink { background-color: pink; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold; }
-        .highlight-blue { background-color: blue; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold; }
-        .highlight-black { background-color: black; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold; }
-        .highlight-yellow { background-color: yellow; color: black; padding: 2px 4px; border-radius: 3px; font-weight: bold; }
-        .highlight-red { background-color: red; color: white; padding: 2px 4px; border-radius: 3px; font-weight: bold; }
-        .highlight-silver { background-color: silver; color: black; padding: 2px 4px; border-radius: 3px; font-weight: bold; }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
-        <div class="logo">TypingLab</div>
-
         <!-- Setup Screen -->
         <div id="setupScreen" class="setup-screen">
             <div class="input-group">
@@ -267,25 +19,6 @@
 
         <!-- Experiment Screen -->
         <div id="experimentScreen" class="experiment-screen">
-            <div class="stats">
-                <div class="stat">
-                    <div class="stat-value" id="wpm">0</div>
-                    <div class="stat-label">WPM</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-value" id="accuracy">100%</div>
-                    <div class="stat-label">Accuracy</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-value" id="timer">0:00</div>
-                    <div class="stat-label">Time Left</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-value" id="currentSession">1</div>
-                    <div class="stat-label">Session</div>
-                </div>
-            </div>
-
             <div class="passage-container">
                 <div id="passageText" class="passage-text"></div>
                 <textarea id="inputArea" class="input-area" placeholder="Start typing here..." autocomplete="off" spellcheck="false"></textarea>
@@ -309,20 +42,12 @@
                 Your data has been recorded.<br><br>
                 You may now close this window.</p>
             </div>
-            <button class="btn" onclick="resetExperiment()">Start New Experiment</button>
         </div>
     </div>
 
     <script>
-        // Sample passages - in real implementation, these would come from text files
         const passages = [
-            `Jake slammed his fingers across the <span class="highlight-purple">black</span> keys of his guitar, the <span class="highlight-brown">red</span> stage lights blazzing overhead as <span class="highlight-purple">purple</span> smoke billowed from the machines behind him. The crowd was absolutly electric tonight, screaming for more as sweat dripped from his forhead. He had dreamed of this moment since he was twelve years old, practicing in his parent's garage until the neigbors would complain.`,
-            
-            `The <span class="highlight-green">blue</span> spotlight found him in the darkniss, illuminating his <span class="highlight-green">silver</span> chains and the <span class="highlight-green">green</span> dragon tattoo that coiled around his left arm. His voice echoed through the massive amplifires, each note carring the raw emotion he had poured into his music for years. The audience swayed like ocean waves, completly mesmerized by the power flowing from the stage.`,
-            
-            `Behind him, the drummer pounded out a ryhthm on his <span class="highlight-green">white</span> drum kit while <span class="highlight-white">orange</span> flames shot up from the stage floor, creating <span class="highlight-brown">yellow</span> shadows that danced accross the packed arena. Jake's guitar solo reached its cressendo, his fingers moving so fast they were barely visable to the naked eye. This was what he lived for – the pure adrenalin rush of performing for thousands of devoted fans.`,
-            
-            `The <span class="highlight-orange">red</span> curtains parted to reveel his backup singers, their <span class="highlight-pink">blue</span> sequined dresses sparkling under the bright <span class="highlight-brown">white</span> stage lites that swept across the venue. The bass line thumped through everyone's chest, making hearts beat in perfect rythm with the music. Jake had fought for years to reach this level of success, facing rejection after rejection from record lables who didn't understand his vision.`
+            "Jake slammed his fingers across the black keys of his guitar, the red stage lights blazzing overhead as purple smoke billowed from the machines behind him. The crowd was absolutly electric tonight, screaming for more as sweat dripped from his forhead. He had dreamed of this moment since he was twelve years old, practicing in his parent's garage until the neigbors would complain.\nThe blue spotlight found him in the darkniss, illuminating his silver chains and the green dragon tattoo that coiled around his left arm. His voice echoed through the massive amplifires, each note carring the raw emotion he had poured into his music for years. The audience swayed like ocean waves, completly mesmerized by the power flowing from the stage.\nBehind him, the drummer pounded out a ryhthm on his white drum kit while orange flames shot up from the stage floor, creating yellow shadows that danced accross the packed arena. Jake's guitar solo reached its cressendo, his fingers moving so fast they were barely visable to the naked eye. This was what he lived for – the pure adrenalin rush of performing for thousands of devoted fans.\nThe red curtains parted to reveel his backup singers, their blue sequined dresses sparkling under the bright white stage lites that swept across the venue. The bass line thumped through everyone's chest, making hearts beat in perfect rythm with the music. Jake had fought for years to reach this level of success, facing rejection after rejection from record lables who didn't understand his vision.\nPurple bannars hung from the ceiling while green laser beams cut through the thick yellow haze that filled the concert hall. His manager had warned him that tonite's performance would make or brake his career, but Jake felt nothing but confidence flowing through his vains. The energy from the crowd was intoxicating, feeding his soul and pushing him to deliever the performance of a lifetime."
         ];
 
         let currentPassage = '';
@@ -336,6 +61,7 @@
         let isExperimentActive = false;
         let totalTypedChars = 0;
         let correctChars = 0;
+        let colorAssignments = {}; // Store color assignments for the current passage
 
         function getRandomPassage() {
             return passages[Math.floor(Math.random() * passages.length)];
@@ -356,11 +82,11 @@
 
             document.getElementById('setupScreen').style.display = 'none';
             document.getElementById('experimentScreen').style.display = 'block';
-            
+
             isExperimentActive = true;
             currentSession = 1;
             experimentData = [];
-            
+
             startSession();
         }
 
@@ -369,41 +95,143 @@
             currentPosition = 0;
             totalTypedChars = 0;
             correctChars = 0;
-            
+            colorAssignments = {}; // Reset color assignments for new passage
+
             displayPassage();
-            
+
             const inputArea = document.getElementById('inputArea');
             inputArea.value = '';
             inputArea.focus();
-            
+
             sessionStartTime = Date.now();
             updateTimer();
-            
+
             sessionTimer = setInterval(() => {
                 updateTimer();
                 updateStats();
             }, 1000);
-            
+
             setTimeout(() => {
                 endSession();
             }, sessionDuration * 60 * 1000);
         }
 
+        function assignColorsToPassage() {
+            // Define color words to detect
+            const colorWords = [
+                'red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'white', 'black',
+                'silver', 'gold', 'golden', 'crimson', 'scarlet', 'amber', 'lime', 'emerald', 'jade',
+                'sapphire', 'cobalt', 'navy', 'violet', 'magenta', 'rose', 'coral', 'turquoise',
+                'cyan', 'maroon', 'burgundy', 'olive', 'khaki', 'tan', 'beige', 'ivory', 'gray', 'grey'
+            ];
+
+            // Base colors for highlighting classes
+            const baseColors = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'white', 'black'];
+
+            // Function to get a random color different from the detected word
+            function getRandomColor(detectedWord) {
+                // Get the base color that matches the detected word (if any)
+                const matchingBaseColor = baseColors.find(color =>
+                    detectedWord === color ||
+                    (detectedWord === 'crimson' && color === 'red') ||
+                    (detectedWord === 'scarlet' && color === 'red') ||
+                    (detectedWord === 'maroon' && color === 'red') ||
+                    (detectedWord === 'burgundy' && color === 'red') ||
+                    (detectedWord === 'amber' && color === 'yellow') ||
+                    (detectedWord === 'gold' && color === 'yellow') ||
+                    (detectedWord === 'golden' && color === 'yellow') ||
+                    (detectedWord === 'lime' && color === 'green') ||
+                    (detectedWord === 'emerald' && color === 'green') ||
+                    (detectedWord === 'jade' && color === 'green') ||
+                    (detectedWord === 'olive' && color === 'green') ||
+                    (detectedWord === 'sapphire' && color === 'blue') ||
+                    (detectedWord === 'cobalt' && color === 'blue') ||
+                    (detectedWord === 'navy' && color === 'blue') ||
+                    (detectedWord === 'turquoise' && color === 'blue') ||
+                    (detectedWord === 'cyan' && color === 'blue') ||
+                    (detectedWord === 'violet' && color === 'purple') ||
+                    (detectedWord === 'magenta' && color === 'purple') ||
+                    (detectedWord === 'rose' && color === 'pink') ||
+                    (detectedWord === 'coral' && color === 'orange') ||
+                    (detectedWord === 'khaki' && color === 'yellow') ||
+                    (detectedWord === 'tan' && color === 'yellow') ||
+                    (detectedWord === 'beige' && color === 'yellow') ||
+                    (detectedWord === 'silver' && color === 'white') ||
+                    (detectedWord === 'ivory' && color === 'white') ||
+                    (detectedWord === 'gray' && color === 'black') ||
+                    (detectedWord === 'grey' && color === 'black')
+                );
+
+                // Filter out the matching color to avoid using the same color
+                const availableColors = baseColors.filter(color => color !== matchingBaseColor);
+
+                // Return a random color from the available options
+                return availableColors[Math.floor(Math.random() * availableColors.length)];
+            }
+
+            // Split text into paragraphs first to preserve line breaks
+            const paragraphs = currentPassage.split('\n');
+
+            paragraphs.forEach(paragraph => {
+                // Split paragraph into words while preserving spaces and punctuation
+                const words = paragraph.split(/(\s+)/);
+
+                words.forEach(word => {
+                    // Extract the actual word without punctuation for color checking
+                    const cleanWord = word.toLowerCase().replace(/[^\w]/g, '');
+
+                    if (colorWords.includes(cleanWord) && !colorAssignments[cleanWord]) {
+                        // Assign a color only if we haven't assigned one for this word yet
+                        colorAssignments[cleanWord] = getRandomColor(cleanWord);
+                    }
+                });
+            });
+        }
+
         function displayPassage() {
             const passageElement = document.getElementById('passageText');
-            const plainText = stripHTML(currentPassage);
+            const plainText = currentPassage;
+
+            // Define color words to detect
+            const colorWords = [
+                'red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'white', 'black',
+                'silver', 'gold', 'golden', 'crimson', 'scarlet', 'amber', 'lime', 'emerald', 'jade',
+                'sapphire', 'cobalt', 'navy', 'violet', 'magenta', 'rose', 'coral', 'turquoise',
+                'cyan', 'maroon', 'burgundy', 'olive', 'khaki', 'tan', 'beige', 'ivory', 'gray', 'grey'
+            ];
+
+            // Assign colors if not already done
+            if (Object.keys(colorAssignments).length === 0) {
+                assignColorsToPassage();
+            }
+
+            // Split text into paragraphs first to preserve line breaks
+            const paragraphs = plainText.split('\n');
             let displayText = '';
             
-            for (let i = 0; i < plainText.length; i++) {
-                let className = '';
-                if (i < currentPosition) {
-                    className = correctChars > i ? 'correct' : 'incorrect';
-                } else if (i === currentPosition) {
-                    className = 'current';
+            paragraphs.forEach((paragraph, paragraphIndex) => {
+                if (paragraphIndex > 0) {
+                    displayText += '<br>'; // Add line break between paragraphs
                 }
-                displayText += `<span class="char ${className}">${plainText[i] === ' ' ? '&nbsp;' : plainText[i]}</span>`;
-            }
-            
+                
+                // Split paragraph into words while preserving spaces and punctuation  
+                const words = paragraph.split(/(\s+)/);
+                
+                words.forEach(word => {
+                    // Extract the actual word without punctuation for color checking
+                    const cleanWord = word.toLowerCase().replace(/[^\w]/g, '');
+                    
+                    if (colorWords.includes(cleanWord) && colorAssignments[cleanWord]) {
+                        // Use the pre-assigned color
+                        const highlightClass = `highlight-${colorAssignments[cleanWord]}`;
+                        displayText += `<span class="${highlightClass}">${word}</span>`;
+                    } else {
+                        // Keep the word as is (including spaces and punctuation)
+                        displayText += word;
+                    }
+                });
+            });
+
             passageElement.innerHTML = displayText;
         }
 
@@ -418,38 +246,34 @@
         function updateStats() {
             const inputText = document.getElementById('inputArea').value;
             const plainPassage = stripHTML(currentPassage);
-            
+
             totalTypedChars = inputText.length;
             correctChars = 0;
-            
+
             for (let i = 0; i < Math.min(inputText.length, plainPassage.length); i++) {
                 if (inputText[i] === plainPassage[i]) {
                     correctChars++;
                 }
             }
-            
+
             const elapsed = (Date.now() - sessionStartTime) / 1000 / 60; // minutes
             const wpm = Math.round((correctChars / 5) / Math.max(elapsed, 0.1));
             const accuracy = totalTypedChars > 0 ? Math.round((correctChars / totalTypedChars) * 100) : 100;
-            
-            document.getElementById('wpm').textContent = wpm;
-            document.getElementById('accuracy').textContent = accuracy + '%';
-            document.getElementById('currentSession').textContent = currentSession;
-            
+
             currentPosition = inputText.length;
             displayPassage();
         }
 
         function endSession() {
             if (!isExperimentActive) return;
-            
+
             clearInterval(sessionTimer);
-            
+
             // Record session data
             const elapsed = (Date.now() - sessionStartTime) / 1000 / 60;
             const wpm = Math.round((correctChars / 5) / Math.max(elapsed, 0.1));
             const accuracy = totalTypedChars > 0 ? Math.round((correctChars / totalTypedChars) * 100) : 100;
-            
+
             experimentData.push({
                 session: currentSession,
                 wpm: wpm,
@@ -460,7 +284,7 @@
                 totalChars: totalTypedChars,
                 correctChars: correctChars
             });
-            
+
             if (currentSession < 3) { // Continue for multiple sessions
                 startBreak();
             } else {
@@ -471,14 +295,14 @@
         function startBreak() {
             document.getElementById('experimentScreen').style.display = 'none';
             document.getElementById('breakScreen').style.display = 'block';
-            
+
             let breakTime = 30;
             document.getElementById('breakTimer').textContent = breakTime;
-            
+
             breakTimer = setInterval(() => {
                 breakTime--;
                 document.getElementById('breakTimer').textContent = breakTime;
-                
+
                 if (breakTime <= 0) {
                     clearInterval(breakTimer);
                     document.getElementById('breakScreen').style.display = 'none';
@@ -493,7 +317,7 @@
             isExperimentActive = false;
             document.getElementById('experimentScreen').style.display = 'none';
             document.getElementById('completionScreen').style.display = 'block';
-            
+
             // Save data to CSV file
             saveDataToCSV();
         }
@@ -511,7 +335,7 @@
             document.getElementById('breakScreen').style.display = 'none';
             document.getElementById('experimentScreen').style.display = 'none';
             document.getElementById('setupScreen').style.display = 'block';
-            
+
             currentSession = 1;
             experimentData = [];
             isExperimentActive = false;
@@ -519,7 +343,7 @@
 
         // Event listeners
         document.getElementById('inputArea').addEventListener('input', updateStats);
-        
+
         document.getElementById('inputArea').addEventListener('keydown', function(e) {
             if (e.key === 'Tab') {
                 e.preventDefault();
