@@ -208,19 +208,19 @@
             // Split text into paragraphs first to preserve line breaks
             const paragraphs = plainText.split('\n');
             let displayText = '';
-            
+
             paragraphs.forEach((paragraph, paragraphIndex) => {
                 if (paragraphIndex > 0) {
                     displayText += '<br>'; // Add line break between paragraphs
                 }
-                
-                // Split paragraph into words while preserving spaces and punctuation  
+
+                // Split paragraph into words while preserving spaces and punctuation
                 const words = paragraph.split(/(\s+)/);
-                
+
                 words.forEach(word => {
                     // Extract the actual word without punctuation for color checking
                     const cleanWord = word.toLowerCase().replace(/[^\w]/g, '');
-                    
+
                     if (colorWords.includes(cleanWord) && colorAssignments[cleanWord]) {
                         // Use the pre-assigned color
                         const highlightClass = `highlight-${colorAssignments[cleanWord]}`;
