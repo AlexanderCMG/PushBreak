@@ -19,9 +19,9 @@ class NotificationDelegate(DefaultDelegate):
 	def __init__(self):
 		super().__init__()
 		self.activity = []
-		self.MAX_ACTIVITY = 10
+		self.MAX_ACTIVITY = 2 #150
 		self.timer = 0
-		self.MAX_TIMER = 3
+		self.MAX_TIMER = 30 #60
 
 	def handleNotification(self, cHandle, data):
 		steps = int.from_bytes(data[0:2], byteorder='little')
