@@ -19,6 +19,7 @@
 
         <!-- Experiment Screen -->
         <div id="experimentScreen" class="experiment-screen">
+            <div id="timer" class="timer"></div>
             <div class="passage-container">
                 <div id="passageText" class="passage-text"></div>
                 <textarea id="inputArea" class="input-area" placeholder="Start typing here..." autocomplete="off" spellcheck="false"></textarea>
@@ -95,7 +96,7 @@
             currentPosition = 0;
             totalTypedChars = 0;
             correctChars = 0;
-            colorAssignments = {}; // Reset color assignments for new passage
+            colorAssignments = {};
 
             displayPassage();
 
