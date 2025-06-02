@@ -8,40 +8,57 @@
 </head>
 <body>
     <div class="container">
+        <div class="header">
+            <img id="logo" src="uvalogo.png" alt="UVA Logo" class="logo">
+            <button id="stopButton" class="btn btn-stop" onclick="stopExperiment()">Stop Experiment</button>
+        </div>
+
         <!-- Setup Screen -->
         <div id="setupScreen" class="setup-screen">
-            <div class="input-group">
-                <label for="sessionDuration">Session Duration (minutes):</label>
-                <input type="number" id="sessionDuration" value="2" min="1" max="30">
+            <div class="setup-content">
+                <div class="participantNumber">
+                    <label for="participantNumber">Participant Number:</label>
+                    <input type="number" id="participantNumber" value="0" min="0" max="30" placeholder="Enter your participant number" required>
+                </div>
+                <div class="input-group">
+                    <label for="sessionDuration">Task Duration (minutes):</label>
+                    <input type="number" id="sessionDuration" value="2" min="1" max="30">
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="colorblindMode">
+                    <label for="colorblindMode">Colorblind Mode (simplified colors)</label>
+                </div>
+                <button class="btn" onclick="startExperiment()">Start Experiment</button>
             </div>
-            <button class="btn" onclick="startExperiment()">Start Experiment</button>
         </div>
 
         <!-- Experiment Screen -->
         <div id="experimentScreen" class="experiment-screen">
-            <div id="timer" class="timer"></div>
+            <div class="controls">
+                <button class="btn btn-stop" onclick="stopExperiment()">Stop Experiment</button>
+            </div>
             <div class="passage-container">
                 <div id="passageText" class="passage-text"></div>
+            </div>
+            <div class="input-section">
                 <textarea id="inputArea" class="input-area" placeholder="Start typing here..." autocomplete="off" spellcheck="false"></textarea>
             </div>
-
-            <button class="btn btn-stop" onclick="stopExperiment()">Stop Experiment</button>
         </div>
 
         <!-- Break Screen -->
         <div id="breakScreen" class="break-screen">
-            <h2>Take a 30-second break</h2>
+            <h2>Your next task will start in 30 seconds</h2>
             <div class="break-timer" id="breakTimer">30</div>
-            <p>Get ready for the next session...</p>
+            <p>Get ready for the next task...</p>
         </div>
 
         <!-- Completion Screen -->
         <div id="completionScreen" class="completion-screen">
             <div class="completion-message">
-                <h2>Thank you for participating!</h2>
+                <h2>Thank you!</h2>
                 <p>The experiment has been completed successfully.<br>
                 Your data has been recorded.<br><br>
-                You may now close this window.</p>
+                You may now close this window and return to the survey.</p>
             </div>
         </div>
     </div>
@@ -52,37 +69,65 @@
         ];
 
         let currentPassage = '';
-        let currentPosition = 0;
-        let sessionDuration = 2; // minutes
+        let expectedText = '';
+        let sessionDuration = 2;
         let currentSession = 1;
         let sessionStartTime = 0;
         let sessionTimer = null;
         let breakTimer = null;
         let experimentData = [];
         let isExperimentActive = false;
-        let totalTypedChars = 0;
-        let correctChars = 0;
-        let colorAssignments = {}; // Store color assignments for the current passage
+        let colorAssignments = {};
+        let isColorblindMode = false;
+
+        // Advanced accuracy tracking
+        let accuracyTracker = {
+            totalCorrectChars: 0,
+            totalAttemptedChars: 0,
+            corrections: 0,
+            lastValidPosition: 0,
+            positionMap: new Map(), // Maps input position to expected text position
+            reset: function() {
+                this.totalCorrectChars = 0;
+                this.totalAttemptedChars = 0;
+                this.corrections = 0;
+                this.lastValidPosition = 0;
+                this.positionMap.clear();
+            }
+        };
+
+        // Color word mappings
+        const colorWords = [
+            'red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'white', 'black',
+            'silver', 'gold', 'golden', 'crimson', 'scarlet', 'amber', 'lime', 'emerald', 'jade',
+            'sapphire', 'cobalt', 'navy', 'violet', 'magenta', 'rose', 'coral', 'turquoise',
+            'cyan', 'maroon', 'burgundy', 'olive', 'khaki', 'tan', 'beige', 'ivory', 'gray', 'grey'
+        ];
+
+        const colorblindColors = ['blue', 'yellow', 'black', 'white'];
+        const normalColors = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'white', 'black'];
 
         function getRandomPassage() {
             return passages[Math.floor(Math.random() * passages.length)];
         }
 
-        function stripHTML(html) {
-            const temp = document.createElement('div');
-            temp.innerHTML = html;
-            return temp.textContent || temp.innerText || '';
-        }
-
         function startExperiment() {
             sessionDuration = parseInt(document.getElementById('sessionDuration').value);
+            isColorblindMode = document.getElementById('colorblindMode').checked;
+
             if (sessionDuration < 1) {
                 alert('Please enter a valid duration (at least 1 minute)');
                 return;
             }
 
+            // Apply colorblind mode class
+            document.body.classList.toggle('colorblind', isColorblindMode);
+
+            // Show the stop button
+            document.getElementById('stopButton').style.display = 'block';
+
             document.getElementById('setupScreen').style.display = 'none';
-            document.getElementById('experimentScreen').style.display = 'block';
+            document.getElementById('experimentScreen').style.display = 'flex';
 
             isExperimentActive = true;
             currentSession = 1;
@@ -93,11 +138,12 @@
 
         function startSession() {
             currentPassage = getRandomPassage();
-            currentPosition = 0;
-            totalTypedChars = 0;
-            correctChars = 0;
             colorAssignments = {};
+            accuracyTracker.reset();
 
+            assignColorsToPassage();
+            console.log('Color Assignments:', colorAssignments);
+            createExpectedText();
             displayPassage();
 
             const inputArea = document.getElementById('inputArea');
@@ -109,7 +155,7 @@
 
             sessionTimer = setInterval(() => {
                 updateTimer();
-                updateStats();
+                console.log('Session Timer:', Math.floor((Date.now() - sessionStartTime) / 1000), 'seconds elapsed');
             }, 1000);
 
             setTimeout(() => {
@@ -118,116 +164,86 @@
         }
 
         function assignColorsToPassage() {
-            // Define color words to detect
-            const colorWords = [
-                'red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'white', 'black',
-                'silver', 'gold', 'golden', 'crimson', 'scarlet', 'amber', 'lime', 'emerald', 'jade',
-                'sapphire', 'cobalt', 'navy', 'violet', 'magenta', 'rose', 'coral', 'turquoise',
-                'cyan', 'maroon', 'burgundy', 'olive', 'khaki', 'tan', 'beige', 'ivory', 'gray', 'grey'
-            ];
+            const availableColors = isColorblindMode ? colorblindColors : normalColors;
+            const foundColorWords = new Set();
+            const usedColors = new Set();
 
-            // Base colors for highlighting classes
-            const baseColors = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'white', 'black'];
-
-            // Function to get a random color different from the detected word
-            function getRandomColor(detectedWord) {
-                // Get the base color that matches the detected word (if any)
-                const matchingBaseColor = baseColors.find(color =>
-                    detectedWord === color ||
-                    (detectedWord === 'crimson' && color === 'red') ||
-                    (detectedWord === 'scarlet' && color === 'red') ||
-                    (detectedWord === 'maroon' && color === 'red') ||
-                    (detectedWord === 'burgundy' && color === 'red') ||
-                    (detectedWord === 'amber' && color === 'yellow') ||
-                    (detectedWord === 'gold' && color === 'yellow') ||
-                    (detectedWord === 'golden' && color === 'yellow') ||
-                    (detectedWord === 'lime' && color === 'green') ||
-                    (detectedWord === 'emerald' && color === 'green') ||
-                    (detectedWord === 'jade' && color === 'green') ||
-                    (detectedWord === 'olive' && color === 'green') ||
-                    (detectedWord === 'sapphire' && color === 'blue') ||
-                    (detectedWord === 'cobalt' && color === 'blue') ||
-                    (detectedWord === 'navy' && color === 'blue') ||
-                    (detectedWord === 'turquoise' && color === 'blue') ||
-                    (detectedWord === 'cyan' && color === 'blue') ||
-                    (detectedWord === 'violet' && color === 'purple') ||
-                    (detectedWord === 'magenta' && color === 'purple') ||
-                    (detectedWord === 'rose' && color === 'pink') ||
-                    (detectedWord === 'coral' && color === 'orange') ||
-                    (detectedWord === 'khaki' && color === 'yellow') ||
-                    (detectedWord === 'tan' && color === 'yellow') ||
-                    (detectedWord === 'beige' && color === 'yellow') ||
-                    (detectedWord === 'silver' && color === 'white') ||
-                    (detectedWord === 'ivory' && color === 'white') ||
-                    (detectedWord === 'gray' && color === 'black') ||
-                    (detectedWord === 'grey' && color === 'black')
-                );
-
-                // Filter out the matching color to avoid using the same color
-                const availableColors = baseColors.filter(color => color !== matchingBaseColor);
-
-                // Return a random color from the available options
-                return availableColors[Math.floor(Math.random() * availableColors.length)];
-            }
-
-            // Split text into paragraphs first to preserve line breaks
+            // Find all color words in the passage
             const paragraphs = currentPassage.split('\n');
-
             paragraphs.forEach(paragraph => {
-                // Split paragraph into words while preserving spaces and punctuation
                 const words = paragraph.split(/(\s+)/);
-
                 words.forEach(word => {
-                    // Extract the actual word without punctuation for color checking
                     const cleanWord = word.toLowerCase().replace(/[^\w]/g, '');
-
-                    if (colorWords.includes(cleanWord) && !colorAssignments[cleanWord]) {
-                        // Assign a color only if we haven't assigned one for this word yet
-                        colorAssignments[cleanWord] = getRandomColor(cleanWord);
+                    if (colorWords.includes(cleanWord)) {
+                        foundColorWords.add(cleanWord);
                     }
                 });
+            });
+
+            // Assign colors to each unique color word
+            foundColorWords.forEach(colorWord => {
+                const matchingBaseColor = getMatchingBaseColor(colorWord);
+                let availableOptions = availableColors.filter(color =>
+                    color !== matchingBaseColor && !usedColors.has(color)
+                );
+
+                if (availableOptions.length === 0) {
+                    availableOptions = availableColors.filter(color => color !== matchingBaseColor);
+                    usedColors.clear();
+                }
+
+                const selectedColor = availableOptions[Math.floor(Math.random() * availableOptions.length)];
+                usedColors.add(selectedColor);
+                colorAssignments[colorWord] = selectedColor;
+            });
+        }
+
+        function getMatchingBaseColor(colorWord) {
+            const mappings = {
+                'crimson': 'red', 'scarlet': 'red', 'maroon': 'red', 'burgundy': 'red',
+                'amber': 'yellow', 'gold': 'yellow', 'golden': 'yellow', 'khaki': 'yellow', 'tan': 'yellow', 'beige': 'yellow',
+                'lime': 'green', 'emerald': 'green', 'jade': 'green', 'olive': 'green',
+                'sapphire': 'blue', 'cobalt': 'blue', 'navy': 'blue', 'turquoise': 'blue', 'cyan': 'blue',
+                'violet': 'purple', 'magenta': 'purple',
+                'rose': 'pink', 'coral': 'orange',
+                'silver': 'white', 'ivory': 'white',
+                'gray': 'black', 'grey': 'black'
+            };
+            return mappings[colorWord] || colorWord;
+        }
+
+        function createExpectedText() {
+            // Create a regex pattern that matches all color words we need to replace
+            const colorWordPattern = new RegExp(
+                `\\b(${Object.keys(colorAssignments).join('|')})\\b`,
+                'gi'
+            );
+
+            // Replace all color words in one pass
+            expectedText = currentPassage.replace(colorWordPattern, (match) => {
+                const lowerMatch = match.toLowerCase();
+                return colorAssignments[lowerMatch] || match;
             });
         }
 
         function displayPassage() {
             const passageElement = document.getElementById('passageText');
-            const plainText = currentPassage;
-
-            // Define color words to detect
-            const colorWords = [
-                'red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'white', 'black',
-                'silver', 'gold', 'golden', 'crimson', 'scarlet', 'amber', 'lime', 'emerald', 'jade',
-                'sapphire', 'cobalt', 'navy', 'violet', 'magenta', 'rose', 'coral', 'turquoise',
-                'cyan', 'maroon', 'burgundy', 'olive', 'khaki', 'tan', 'beige', 'ivory', 'gray', 'grey'
-            ];
-
-            // Assign colors if not already done
-            if (Object.keys(colorAssignments).length === 0) {
-                assignColorsToPassage();
-            }
-
-            // Split text into paragraphs first to preserve line breaks
-            const paragraphs = plainText.split('\n');
             let displayText = '';
 
+            const paragraphs = currentPassage.split('\n');
             paragraphs.forEach((paragraph, paragraphIndex) => {
                 if (paragraphIndex > 0) {
-                    displayText += '<br>'; // Add line break between paragraphs
+                    displayText += '\n';
                 }
 
-                // Split paragraph into words while preserving spaces and punctuation
                 const words = paragraph.split(/(\s+)/);
-
                 words.forEach(word => {
-                    // Extract the actual word without punctuation for color checking
                     const cleanWord = word.toLowerCase().replace(/[^\w]/g, '');
 
                     if (colorWords.includes(cleanWord) && colorAssignments[cleanWord]) {
-                        // Use the pre-assigned color
                         const highlightClass = `highlight-${colorAssignments[cleanWord]}`;
                         displayText += `<span class="${highlightClass}">${word}</span>`;
                     } else {
-                        // Keep the word as is (including spaces and punctuation)
                         displayText += word;
                     }
                 });
@@ -236,33 +252,84 @@
             passageElement.innerHTML = displayText;
         }
 
+        function calculateAdvancedAccuracy(inputText) {
+            const input = inputText;
+            const expected = expectedText;
+
+            let inputPos = 0;
+            let expectedPos = 0;
+            let correctChars = 0;
+            let totalProcessedChars = 0;
+
+            // Reset position map for this calculation
+            accuracyTracker.positionMap.clear();
+
+            while (inputPos < input.length && expectedPos < expected.length) {
+                totalProcessedChars++;
+
+                if (input[inputPos] === expected[expectedPos]) {
+                    // Direct match
+                    correctChars++;
+                    accuracyTracker.positionMap.set(inputPos, expectedPos);
+                    inputPos++;
+                    expectedPos++;
+                } else {
+                    // Look ahead in input to find next matching sequence
+                    let foundMatch = false;
+                    let lookAheadInput = inputPos + 1;
+
+                    // Look up to 10 characters ahead in input
+                    while (lookAheadInput < Math.min(input.length, inputPos + 10)) {
+                        if (input[lookAheadInput] === expected[expectedPos]) {
+                            // Found a match, check if it's a substantial sequence (at least 3 chars)
+                            let seqLength = 0;
+                            let tempInputPos = lookAheadInput;
+                            let tempExpectedPos = expectedPos;
+
+                            while (tempInputPos < input.length &&
+                                   tempExpectedPos < expected.length &&
+                                   input[tempInputPos] === expected[tempExpectedPos] &&
+                                   seqLength < 5) {
+                                seqLength++;
+                                tempInputPos++;
+                                tempExpectedPos++;
+                            }
+
+                            if (seqLength >= 3) {
+                                // Valid sequence found, skip the incorrect part in input
+                                inputPos = lookAheadInput;
+                                foundMatch = true;
+                                break;
+                            }
+                        }
+                        lookAheadInput++;
+                    }
+
+                    if (!foundMatch) {
+                        // No good match found, advance both pointers
+                        inputPos++;
+                        expectedPos++;
+                    }
+                }
+            }
+
+            // Handle any remaining characters in input as attempted
+            totalProcessedChars += Math.max(0, input.length - inputPos);
+
+            accuracyTracker.totalCorrectChars = correctChars;
+            accuracyTracker.totalAttemptedChars = Math.max(totalProcessedChars, input.length);
+
+            return accuracyTracker.totalAttemptedChars > 0 ?
+                (accuracyTracker.totalCorrectChars / accuracyTracker.totalAttemptedChars) * 100 : 100;
+        }
+
         function updateTimer() {
             const elapsed = (Date.now() - sessionStartTime) / 1000;
             const remaining = Math.max(0, (sessionDuration * 60) - elapsed);
             const minutes = Math.floor(remaining / 60);
             const seconds = Math.floor(remaining % 60);
-            document.getElementById('timer').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-        }
-
-        function updateStats() {
-            const inputText = document.getElementById('inputArea').value;
-            const plainPassage = stripHTML(currentPassage);
-
-            totalTypedChars = inputText.length;
-            correctChars = 0;
-
-            for (let i = 0; i < Math.min(inputText.length, plainPassage.length); i++) {
-                if (inputText[i] === plainPassage[i]) {
-                    correctChars++;
-                }
-            }
-
-            const elapsed = (Date.now() - sessionStartTime) / 1000 / 60; // minutes
-            const wpm = Math.round((correctChars / 5) / Math.max(elapsed, 0.1));
-            const accuracy = totalTypedChars > 0 ? Math.round((correctChars / totalTypedChars) * 100) : 100;
-
-            currentPosition = inputText.length;
-            displayPassage();
+            // document.getElementById('timeStat').textContent =
+            //     `${minutes}:${seconds.toString().padStart(2, '0')}`;
         }
 
         function endSession() {
@@ -270,23 +337,26 @@
 
             clearInterval(sessionTimer);
 
-            // Record session data
+            const inputText = document.getElementById('inputArea').value;
+            const accuracy = calculateAdvancedAccuracy(inputText);
             const elapsed = (Date.now() - sessionStartTime) / 1000 / 60;
-            const wpm = Math.round((correctChars / 5) / Math.max(elapsed, 0.1));
-            const accuracy = totalTypedChars > 0 ? Math.round((correctChars / totalTypedChars) * 100) : 100;
+            const wpm = Math.round((accuracyTracker.totalCorrectChars / 5) / elapsed);
 
             experimentData.push({
                 session: currentSession,
                 wpm: wpm,
-                accuracy: accuracy,
-                passage: stripHTML(currentPassage),
-                typedText: document.getElementById('inputArea').value,
+                accuracy: Math.round(accuracy),
+                passage: currentPassage,
+                expectedText: expectedText,
+                typedText: inputText,
                 duration: sessionDuration,
-                totalChars: totalTypedChars,
-                correctChars: correctChars
+                totalChars: accuracyTracker.totalAttemptedChars,
+                correctChars: accuracyTracker.totalCorrectChars,
+                colorblindMode: isColorblindMode,
+                colorAssignments: { ...colorAssignments }
             });
 
-            if (currentSession < 3) { // Continue for multiple sessions
+            if (currentSession < 10) {
                 startBreak();
             } else {
                 showCompletion();
@@ -295,7 +365,7 @@
 
         function startBreak() {
             document.getElementById('experimentScreen').style.display = 'none';
-            document.getElementById('breakScreen').style.display = 'block';
+            document.getElementById('breakScreen').style.display = 'flex';
 
             let breakTime = 30;
             document.getElementById('breakTimer').textContent = breakTime;
@@ -307,7 +377,7 @@
                 if (breakTime <= 0) {
                     clearInterval(breakTimer);
                     document.getElementById('breakScreen').style.display = 'none';
-                    document.getElementById('experimentScreen').style.display = 'block';
+                    document.getElementById('experimentScreen').style.display = 'flex';
                     currentSession++;
                     startSession();
                 }
@@ -316,13 +386,12 @@
 
         function showCompletion() {
             isExperimentActive = false;
+            document.getElementById('stopButton').style.display = 'none';
             document.getElementById('experimentScreen').style.display = 'none';
-            document.getElementById('completionScreen').style.display = 'block';
+            document.getElementById('completionScreen').style.display = 'flex';
 
-            // Save data to CSV file
-            saveDataToCSV();
+            console.log('Experiment data:', experimentData);
         }
-
 
         function stopExperiment() {
             isExperimentActive = false;
@@ -331,20 +400,7 @@
             showCompletion();
         }
 
-        function resetExperiment() {
-            document.getElementById('resultsScreen').style.display = 'none';
-            document.getElementById('breakScreen').style.display = 'none';
-            document.getElementById('experimentScreen').style.display = 'none';
-            document.getElementById('setupScreen').style.display = 'block';
-
-            currentSession = 1;
-            experimentData = [];
-            isExperimentActive = false;
-        }
-
         // Event listeners
-        document.getElementById('inputArea').addEventListener('input', updateStats);
-
         document.getElementById('inputArea').addEventListener('keydown', function(e) {
             if (e.key === 'Tab') {
                 e.preventDefault();
@@ -352,7 +408,8 @@
         });
 
         // Initialize
-        document.getElementById('setupScreen').style.display = 'block';
+        document.getElementById('setupScreen').style.display = 'flex';
+        document.getElementById('stopButton').style.display = 'none';
     </script>
 </body>
 </html>

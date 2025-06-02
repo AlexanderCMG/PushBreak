@@ -4,28 +4,51 @@
     box-sizing: border-box;
 }
 
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+}
+
+.logo {
+    height: 30px;
+    width: auto;
+}
+
 body {
     font-family: 'Courier New', monospace;
     background: linear-gradient(135deg, #ffa3a3, #b4d5fe);
     color: #000000;
-    min-height: 100vh;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.container {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Setup Screen Styles */
+.setup-screen {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 20px;
-}
-
-.container {
-    width: 100%;
+    height: 100vh;
     text-align: center;
 }
 
-.setup-screen {
+.setup-content {
     background: rgba(134, 134, 134, 0.25);
     border-radius: 15px;
     padding: 40px;
-    margin-bottom: 30px;
     backdrop-filter: blur(10px);
     border: 1px solid rgba(79, 64, 10, 0.2);
 }
@@ -41,6 +64,16 @@ body {
     color: #000000;
 }
 
+.participantNumber input{
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(79, 64, 10, 0.2);
+    border-radius: 8px;
+    padding: 5px 10px;
+    color: #000000;
+    text-align: center;
+    font-family: 'Courier New', monospace;
+}
+
 .input-group input {
     background: rgba(255, 255, 255, 0.1);
     border: 2px solid rgba(79, 64, 10, 0.2);
@@ -53,10 +86,16 @@ body {
     font-family: 'Courier New', monospace;
 }
 
+.participantNumber input:focus {
+    outline: none;
+    border-color: rgba(79, 64, 10, 0.2);
+    box-shadow: 0 0 7px rgba(67, 40, 223, 0.3);
+}
+
 .input-group input:focus {
     outline: none;
     border-color: rgba(79, 64, 10, 0.2);
-    box-shadow: 0 0 20px rgba(226, 183, 20, 0.3);
+    box-shadow: 0 0 20px rgba(67, 40, 223, 0.3);
 }
 
 .btn {
@@ -64,7 +103,7 @@ body {
     border: none;
     border-radius: 10px;
     padding: 15px 30px;
-    font-size: 1.2rem;
+    font-size: 1rem;
     font-weight: bold;
     color: #f0f0f3;
     cursor: pointer;
@@ -75,7 +114,7 @@ body {
 
 .btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 30px rgba(49, 39, 4, 0.2);
+    box-shadow: 0 10px 30px rgba(10, 4, 49, 0.2);
 }
 
 .btn:active {
@@ -84,38 +123,107 @@ body {
 
 .btn-stop {
     background: linear-gradient(45deg, #e74c3c, #c0392b);
+    display: none;
     color: white;
+    padding: 15px 30px;
 }
 
+/* Experiment Screen - Full Screen Layout */
 .experiment-screen {
     display: none;
+    height: 100vh;
+    flex-direction: column;
+    padding: 20px;
+    gap: 20px;
 }
 
+/* Top section with scrollable passage text */
 .passage-container {
+    flex: 1;
     background: rgba(134, 134, 134, 0.25);
     border-radius: 15px;
     padding: 30px;
-    margin-bottom: 20px;
     backdrop-filter: blur(10px);
     border: 1px solid rgba(25, 20, 3, 0.2);
-    line-height: 1.8;
-    font-size: 1.5rem;
-    text-align: left;
+    display: flex;
+    flex-direction: column;
+    min-height: 0; /* Important for flex child to be scrollable */
 }
 
 .passage-text {
-    margin-bottom: 20px;
+    flex: 1;
+    line-height: 1.8;
+    font-size: 1.5rem;
+    text-align: left;
     user-select: none;
-    white-space: normal;
+    white-space: pre-wrap;
     word-break: break-word;
     overflow-wrap: break-word;
+    overflow-y: auto;
+    padding-right: 10px;
+    margin-bottom: 20px;
+}
+
+/* Custom scrollbar for passage text */
+.passage-text::-webkit-scrollbar {
+    width: 8px;
+}
+
+.passage-text::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+.passage-text::-webkit-scrollbar-thumb {
+    background: rgba(79, 64, 10, 0.3);
+    border-radius: 4px;
+}
+
+.passage-text::-webkit-scrollbar-thumb:hover {
+    background: rgba(79, 64, 10, 0.5);
+}
+
+/* Bottom section with input area - fixed height */
+.input-section {
+    background: rgba(134, 134, 134, 0.25);
+    border-radius: 15px;
+    padding: 20px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(25, 20, 3, 0.2);
+    height: 200px;
+    display: flex;
+    flex-direction: column;
+}
+
+.input-area {
+    flex: 1;
+    background: rgba(180, 180, 180, 0.1);
+    border: 2px solid rgba(79, 64, 10, 0.2);
+    border-radius: 10px;
+    padding: 15px;
+    font-size: 1.1rem;
+    color: #000000;
+    font-family: 'Courier New', monospace;
+    line-height: 1.8;
+    resize: none;
     width: 100%;
+}
+
+.input-area:focus {
+    outline: none;
+    border-color: #0E4EA7;
+    box-shadow: 0 0 20px rgba(22, 46, 166, 0.2);
+}
+
+/* Control buttons section */
+.controls {
+    text-align: center;
+    padding: 10px 0;
 }
 
 .char {
     position: relative;
     display: inline;
-    white-space: nowrap;
 }
 
 .char.correct {
@@ -134,33 +242,19 @@ body {
 }
 
 @keyframes blink {
-    0%, 50% { opacity: 1; }B
+    0%, 50% { opacity: 1; }
     51%, 100% { opacity: 0.6; }
 }
 
-.input-area {
-    width: 100%;
-    min-height: 150px;
-    background: rgba(180, 180, 180, 0.1);
-    border: 2px solid rgba(79, 64, 10, 0.2);
-    border-radius: 10px;
-    padding: 20px;
-    font-size: 1.1rem;
-    color: #000000;
-    font-family: 'Courier New', monospace;
-    line-height: 1.8;
-    resize: none;
-}
-
-.input-area:focus {
-    outline: none;
-    border-color: #0E4EA7;
-    box-shadow: 0 0 20px rgba(166, 135, 22, 0.2);
-}
-
-.break-screen {
+/* Break and completion screens */
+.break-screen, .completion-screen {
     display: none;
+    height: 100vh;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     text-align: center;
+    padding: 20px;
 }
 
 .break-timer {
@@ -168,12 +262,7 @@ body {
     font-weight: bold;
     color: #0E4EA7;
     margin: 30px 0;
-    text-shadow: 0 0 30px rgba(226, 183, 20, 0.5);
-}
-
-.completion-screen {
-    display: none;
-    text-align: center;
+    text-shadow: 0 0 30px rgba(55, 49, 230, 0.444);
 }
 
 .completion-message {
@@ -201,6 +290,7 @@ body {
     display: none !important;
 }
 
+/* Color highlight classes */
 .highlight-purple { background-color: rgb(168, 0, 168); color: rgb(0, 0, 0); padding: 2px 4px; border-radius: 3px;}
 .highlight-green { background-color: rgb(2, 189, 2); color: rgb(0, 0, 0); padding: 2px 4px; border-radius: 3px;}
 .highlight-white { background-color: white; color: black; padding: 2px 4px; border-radius: 3px;}
