@@ -16,7 +16,6 @@ const altPassages = [
     "Coral reefs are often called the rainforests of the sea because of their rich diversity. They are made up of tiny creatures called corals that build hard shells around themselfs over time. These shells pile up to create huge underwater structures that shine under the blue water like white castles surrounded by pink fish.\nCorals might look like rocks but they are alive and very sensative. They use their tiny arms to grab food from the water and they also have colorful algae living inside them that help them grow. If the water gets too hot or dirty the green algae leave and the coral turns white and can die. This is called coral bleeching and it is a big problem.\nReefs are home to thousands of species including yellow seahorses red crabs and even black sharks. Every creature has a role to play from fish that clean the reef to others that hide from predators in its cracks. When you look closely you might see a shrimp waving its arms or a purple octopus changing color to match a rock. Nature gets very creative down there but it also very fragil.\nSome reefs like the Great Barrier Reef are so big they can be seen from space. This reef stretches along the coast of Australia and holds more marine life than anywhere else on Earth. Snorkelers float over blue corals and orange clams while white rays glide past below. It is like swimming in a living rainbow except sometimes the current is strong and you have to swim carfully.\nCoral reefs also help people. They act as natural barriers against storms slowing down waves before they hit the shore. They also bring in money from tourism and provide fish for millions of people. In places like the Maldives or the green Philippines reefs are part of everyday life. But sadly some are being dammaged by pollution overfishing or boats dragging their black anchors through the reef.\nScientists and divers around the world are working to protect and even rebuild coral reefs. Some plant baby corals onto broken areas using pink glue or special yellow frames that hold them in place. Others are making artificial reefs out of sunken ships or blue concrete blocks to give new corals a place to grow. It takes a long time though and it is very slow process.\nOne of the coolest things about coral reefs is how they glow at night. Some corals and animals give off a white or purple light through something called biofluorescence. Under special lights the whole reef looks like a glowing garden from a dream. Divers need to wear red filters on their masks to see it clearly and the effect is totaly magical.\nCoral reefs may seem small or far away but they are a big part of Earth’s health. They keep the oceans balanced provide food and protect coasts from harm. If we take care of the green reefs and reduce our impact they can recover and keep glowing for future gennerations. Saving coral is not just about fish it is about saving ourselvs too.",
 ]
 
-
 let participantId = '';
 let currentPassage = '';
 let usedPassages = new Set();
@@ -35,14 +34,27 @@ let alternate = false;
 const SUPABASE_URL = 'https://vwkfphpdbfvjwzbfrdav.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ3a2ZwaHBkYmZ2and6YmZyZGF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4NjgyOTgsImV4cCI6MjA2NDQ0NDI5OH0.yGJMK4zjJ7Swy5bBDVqiK_fyaLoRI4cBLab6rYqsNnk';
 
-// const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Create a single Supabase client instance
+let supabaseClient = null;
 
 function initializeSupabase() {
+    if (supabaseClient) {
+        return supabaseClient;
+    }
+
     if (typeof window.supabase === 'undefined') {
         console.error('Supabase library not loaded');
         return null;
     }
-    return window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    try {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        console.log('Supabase client created successfully');
+        return supabaseClient;
+    } catch (error) {
+        console.error('Failed to create Supabase client:', error);
+        return null;
+    }
 }
 
 // Color word mappings
@@ -256,19 +268,23 @@ async function logDataToSupabase(sessionEndTime) {
         expected_text: expectedText,
         duration_minutes: sessionDuration,
         is_alternate: alternate,
-        is_colorblind_mode: isColorblindMode,
+        is_colorblind: isColorblindMode,
         color_assignments: colorAssignments,
         session_start_time: new Date(sessionStartTime).toISOString(),
         session_end_time: new Date(sessionEndTime).toISOString()
     };
 
     try {
+        console.log('Attempting to save session data:', sessionData);
+
         const { data, error } = await supabase
-            .from('typing_sessions')
-            .insert([sessionData]);
+            .from('Experiments')
+            .insert([sessionData])
+            .select();
 
         if (error) {
             console.error('Error saving session data:', error);
+            console.error('Error details:', error.message, error.details, error.hint);
             logData(); // Backup to local
         } else {
             console.log('Session data saved successfully:', data);
@@ -296,12 +312,25 @@ function logData() {
     };
 
     experimentData.push(sessionData);
+
+    // Store in localStorage as backup
+    try {
+        const existingData = JSON.parse(localStorage.getItem('typingExperimentData') || '[]');
+        existingData.push(sessionData);
+        localStorage.setItem('typingExperimentData', JSON.stringify(existingData));
+        console.log('Data saved to localStorage as backup');
+    } catch (e) {
+        console.error('Failed to save to localStorage:', e);
+    }
 }
 
 async function getParticipantData(participantId) {
+    const supabase = initializeSupabase();
+    if (!supabase) return null;
+
     try {
         const { data, error } = await supabase
-            .from('typing_sessions')
+            .from('Experiments')
             .select('*')
             .eq('participant_id', participantId)
             .order('session_number');
@@ -318,13 +347,15 @@ async function getParticipantData(participantId) {
     }
 }
 
-// Add this function to get all experiment data
 async function getAllExperimentData() {
+    const supabase = initializeSupabase();
+    if (!supabase) return null;
+
     try {
         const { data, error } = await supabase
-            .from('typing_sessions')
+            .from('Experiments')
             .select('*')
-            .order('participant_id', 'session_number');
+            .order('participant_id, session_number');
 
         if (error) {
             console.error('Error fetching experiment data:', error);
@@ -368,13 +399,76 @@ function showCompletion() {
     document.getElementById('completionScreen').style.display = 'flex';
 
     console.log('Experiment data:', experimentData);
+
+    // Show data export option
+    displayDataExportOption();
 }
 
-function stopExperiment() {
+function displayDataExportOption() {
+    const completionScreen = document.getElementById('completionScreen');
+    if (!completionScreen.querySelector('#exportData')) {
+        const exportButton = document.createElement('button');
+        exportButton.id = 'exportData';
+        exportButton.textContent = 'Download Data as JSON';
+        exportButton.onclick = exportData;
+        completionScreen.appendChild(exportButton);
+    }
+}
+
+function exportData() {
+    const allData = {
+        experimentData: experimentData,
+        localStorageData: JSON.parse(localStorage.getItem('typingExperimentData') || '[]'),
+        exportTime: new Date().toISOString(),
+        participantId: participantId
+    };
+
+    const dataStr = JSON.stringify(allData, null, 2);
+    const dataBlob = new Blob([dataStr], {type: 'application/json'});
+
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(dataBlob);
+    link.download = `typing_experiment_participant_${participantId}_${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+}
+
+async function stopExperiment() {
     isExperimentActive = false;
+    if (document.getElementById('experimentScreen').style.display === 'flex') {
+        const sessionEndTime = Date.now();
+        await logDataToSupabase(sessionEndTime);
+    }
     clearInterval(sessionTimer);
     clearInterval(breakTimer);
     showCompletion();
+}
+
+// Test database connection function
+async function testDatabaseConnection() {
+    const supabase = initializeSupabase();
+    if (!supabase) {
+        console.log('Supabase client could not be created');
+        return false;
+    }
+
+    try {
+        // Test a simple query to check if the table exists
+        const { data, error } = await supabase
+            .from('Experiments')
+            .select('count')
+            .limit(1);
+
+        if (error) {
+            console.error('Database connection test failed:', error.message);
+            return false;
+        }
+
+        console.log('Database connection successful');
+        return true;
+    } catch (err) {
+        console.error('Database connection test error:', err);
+        return false;
+    }
 }
 
 // Event listeners
@@ -395,3 +489,9 @@ document.getElementById('alternate').addEventListener('change', function() {
 // Initialize
 document.getElementById('setupScreen').style.display = 'flex';
 document.getElementById('stopButton').style.display = 'none';
+
+// Test database connection on page load
+window.addEventListener('load', () => {
+    console.log('Testing database connection...');
+    testDatabaseConnection();
+});
