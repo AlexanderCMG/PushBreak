@@ -32,6 +32,19 @@ let colorAssignments = {};
 let isColorblindMode = false;
 let alternate = false;
 
+const SUPABASE_URL = 'https://vwkfphpdbfvjwzbfrdav.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ3a2ZwaHBkYmZ2and6YmZyZGF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4NjgyOTgsImV4cCI6MjA2NDQ0NDI5OH0.yGJMK4zjJ7Swy5bBDVqiK_fyaLoRI4cBLab6rYqsNnk';
+
+// const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function initializeSupabase() {
+    if (typeof window.supabase === 'undefined') {
+        console.error('Supabase library not loaded');
+        return null;
+    }
+    return window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
+
 // Color word mappings
 const colorWords = [
     'red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'white', 'black',
@@ -209,34 +222,122 @@ function displayPassage() {
     passageElement.innerHTML = displayText;
 }
 
-function endSession() {
+async function endSession() {
     if (!isExperimentActive) return;
 
     clearInterval(sessionTimer);
 
-    logData();
+    const sessionEndTime = Date.now();
+    await logDataToSupabase(sessionEndTime);
 
-    if (currentSession <= 6) {
+    if (currentSession < 6) {
         startBreak();
     } else {
         showCompletion();
     }
 }
 
+async function logDataToSupabase(sessionEndTime) {
+    const supabase = initializeSupabase();
+    if (!supabase) {
+        console.error('Failed to initialize Supabase client');
+        // Fall back to local storage
+        logData();
+        return;
+    }
+
+    const inputText = document.getElementById('inputArea').value;
+
+    const sessionData = {
+        participant_id: participantId,
+        session_number: currentSession,
+        passage_index: passageIndex(currentPassage, alternate),
+        typed_text: inputText,
+        expected_text: expectedText,
+        duration_minutes: sessionDuration,
+        is_alternate: alternate,
+        is_colorblind_mode: isColorblindMode,
+        color_assignments: colorAssignments,
+        session_start_time: new Date(sessionStartTime).toISOString(),
+        session_end_time: new Date(sessionEndTime).toISOString()
+    };
+
+    try {
+        const { data, error } = await supabase
+            .from('typing_sessions')
+            .insert([sessionData]);
+
+        if (error) {
+            console.error('Error saving session data:', error);
+            logData(); // Backup to local
+        } else {
+            console.log('Session data saved successfully:', data);
+        }
+    } catch (err) {
+        console.error('Failed to connect to database:', err);
+        logData(); // Backup to local
+    }
+}
+
 function logData() {
     const inputText = document.getElementById('inputArea').value;
 
-    experimentData.push({
+    const sessionData = {
         participant: participantId,
         session: currentSession,
         passage: passageIndex(currentPassage, alternate),
         typedText: inputText,
+        expectedText: expectedText,
         duration: sessionDuration,
         alternate: alternate,
         colorblindMode: isColorblindMode,
-        colorAssignments: { ...colorAssignments }
-    });
+        colorAssignments: { ...colorAssignments },
+        timestamp: new Date().toISOString()
+    };
+
+    experimentData.push(sessionData);
 }
+
+async function getParticipantData(participantId) {
+    try {
+        const { data, error } = await supabase
+            .from('typing_sessions')
+            .select('*')
+            .eq('participant_id', participantId)
+            .order('session_number');
+
+        if (error) {
+            console.error('Error fetching participant data:', error);
+            return null;
+        }
+
+        return data;
+    } catch (err) {
+        console.error('Failed to fetch data:', err);
+        return null;
+    }
+}
+
+// Add this function to get all experiment data
+async function getAllExperimentData() {
+    try {
+        const { data, error } = await supabase
+            .from('typing_sessions')
+            .select('*')
+            .order('participant_id', 'session_number');
+
+        if (error) {
+            console.error('Error fetching experiment data:', error);
+            return null;
+        }
+
+        return data;
+    } catch (err) {
+        console.error('Failed to fetch data:', err);
+        return null;
+    }
+}
+
 function startBreak() {
     document.getElementById('experimentScreen').style.display = 'none';
     document.getElementById('breakScreen').style.display = 'flex';
