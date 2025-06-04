@@ -137,7 +137,7 @@ function startSession() {
     sessionStartTime = Date.now();
 
     sessionTimer = setInterval(() => {
-        console.log('Session Timer:', Math.floor((Date.now() - sessionStartTime) / 1000), 'seconds elapsed');
+        // console.log('Session Timer:', Math.floor((Date.now() - sessionStartTime) / 1000), 'seconds elapsed');
     }, 1000);
 
     setTimeout(() => {
@@ -399,20 +399,6 @@ function showCompletion() {
     document.getElementById('completionScreen').style.display = 'flex';
 
     console.log('Experiment data:', experimentData);
-
-    // Show data export option
-    displayDataExportOption();
-}
-
-function displayDataExportOption() {
-    const completionScreen = document.getElementById('completionScreen');
-    if (!completionScreen.querySelector('#exportData')) {
-        const exportButton = document.createElement('button');
-        exportButton.id = 'exportData';
-        exportButton.textContent = 'Download Data as JSON';
-        exportButton.onclick = exportData;
-        completionScreen.appendChild(exportButton);
-    }
 }
 
 function exportData() {
