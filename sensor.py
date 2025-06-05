@@ -19,6 +19,8 @@ BAUD_RATE = 9600
 # Activity Detection Settings
 SITTING_DETECTION_TIME = 30  # seconds - how long to monitor for sitting detection
 STEPS_THRESHOLD = 5          # minimum steps needed to be considered "active"
+WALKING_DETECTION_TIME = 60  # seconds - how long of walking before motor goes down (1 minute default)
+WALKING_STEPS_THRESHOLD = 10 # minimum steps per detection window to be considered "walking"
 
 # Motor Control Settings
 SITTING_TIMEOUT = 5 * 60     # seconds - how long of sitting before motor starts (5 minutes)
@@ -41,6 +43,10 @@ class ActivityMonitor(DefaultDelegate):
         self.sitting_start_time = None
         self.last_activity_time = time.time()
         
+        # Walking detection
+        self.walking_start_time = None
+        self.motor_lowered = False  # Track if motor has been lowered due to walking
+        
         # Motor control
         self.motor_active = False
         self.motor_start_time = None
@@ -48,6 +54,7 @@ class ActivityMonitor(DefaultDelegate):
         
         print("=== Activity Monitor Started ===")
         print(f"Sitting timeout: {SITTING_TIMEOUT/60:.1f} minutes")
+        print(f"Walking detection time: {WALKING_DETECTION_TIME} seconds")
         print(f"Motor activation duration: {MOTOR_ACTIVATION_DURATION} seconds")
         print(f"Motor repeat interval: {MOTOR_REPEAT_INTERVAL/60:.1f} minutes")
         print("=" * 35)
@@ -62,32 +69,43 @@ class ActivityMonitor(DefaultDelegate):
             'timestamp': current_time
         })
         
-        # Keep only recent readings (last SITTING_DETECTION_TIME seconds)
-        cutoff_time = current_time - SITTING_DETECTION_TIME
+        # Keep only recent readings (last max of sitting/walking detection time)
+        max_detection_time = max(SITTING_DETECTION_TIME, WALKING_DETECTION_TIME)
+        cutoff_time = current_time - max_detection_time
         self.step_readings = [r for r in self.step_readings if r['timestamp'] > cutoff_time]
         
-        # Check if user is currently sitting
+        # Check activity states
         is_currently_sitting = self._is_sitting()
+        is_currently_walking = self._is_walking()
         
-        if is_currently_sitting:
+        if is_currently_walking:
+            self._handle_walking_detected(current_time)
+        elif is_currently_sitting:
             self._handle_sitting_detected(current_time)
         else:
-            self._handle_activity_detected(current_time)
+            self._handle_general_activity_detected(current_time)
         
         # Update motor state
         self._update_motor_state(current_time)
         
         # Print status
-        self._print_status(steps, is_currently_sitting)
+        self._print_status(steps, is_currently_sitting, is_currently_walking)
 
     def _is_sitting(self):
         """Determine if user is sitting based on recent step data"""
         if len(self.step_readings) < 2:
             return False
         
+        # Get readings from the sitting detection window
+        cutoff_time = time.time() - SITTING_DETECTION_TIME
+        sitting_readings = [r for r in self.step_readings if r['timestamp'] > cutoff_time]
+        
+        if len(sitting_readings) < 2:
+            return False
+        
         # Calculate step difference over the monitoring period
-        oldest_reading = min(self.step_readings, key=lambda x: x['timestamp'])
-        newest_reading = max(self.step_readings, key=lambda x: x['timestamp'])
+        oldest_reading = min(sitting_readings, key=lambda x: x['timestamp'])
+        newest_reading = max(sitting_readings, key=lambda x: x['timestamp'])
         
         step_difference = newest_reading['steps'] - oldest_reading['steps']
         time_difference = newest_reading['timestamp'] - oldest_reading['timestamp']
@@ -98,19 +116,81 @@ class ActivityMonitor(DefaultDelegate):
         
         return False
 
+    def _is_walking(self):
+        """Determine if user is walking based on recent step data"""
+        if len(self.step_readings) < 2:
+            return False
+        
+        # Get readings from the walking detection window
+        cutoff_time = time.time() - WALKING_DETECTION_TIME
+        walking_readings = [r for r in self.step_readings if r['timestamp'] > cutoff_time]
+        
+        if len(walking_readings) < 2:
+            return False
+        
+        # Calculate step difference over the walking monitoring period
+        oldest_reading = min(walking_readings, key=lambda x: x['timestamp'])
+        newest_reading = max(walking_readings, key=lambda x: x['timestamp'])
+        
+        step_difference = newest_reading['steps'] - oldest_reading['steps']
+        time_difference = newest_reading['timestamp'] - oldest_reading['timestamp']
+        
+        # Consider it walking if we have enough data and sufficient step count
+        if time_difference >= WALKING_DETECTION_TIME * 0.8:  # At least 80% of monitoring window
+            return step_difference >= WALKING_STEPS_THRESHOLD
+        
+        return False
+
+    def _handle_walking_detected(self, current_time):
+        """Handle when walking is detected"""
+        if self.walking_start_time is None:
+            self.walking_start_time = current_time
+            print(f"Walking detected at {datetime.now().strftime('%H:%M:%S')}")
+        
+        # Reset sitting state if we were sitting
+        if self.sitting_start_time is not None:
+            sitting_duration = current_time - self.sitting_start_time
+            print(f"Walking started! Was sitting for {sitting_duration/60:.1f} minutes")
+            self.sitting_start_time = None
+        
+        self.last_activity_time = current_time
+        
+        # Stop motor if it's currently running
+        if self.motor_active:
+            self._stop_motor()
+        
+        # Check if we should lower the motor due to sustained walking
+        if not self.motor_lowered:
+            walking_duration = current_time - self.walking_start_time
+            if walking_duration >= WALKING_DETECTION_TIME:
+                self._lower_motor()
+
     def _handle_sitting_detected(self, current_time):
         """Handle when sitting is detected"""
+        # Reset walking state
+        if self.walking_start_time is not None:
+            walking_duration = current_time - self.walking_start_time
+            print(f"Stopped walking after {walking_duration/60:.1f} minutes")
+            self.walking_start_time = None
+        
         if self.sitting_start_time is None:
             self.sitting_start_time = current_time
             print(f"Sitting detected at {datetime.now().strftime('%H:%M:%S')}")
 
-    def _handle_activity_detected(self, current_time):
-        """Handle when activity is detected"""
+    def _handle_general_activity_detected(self, current_time):
+        """Handle when general activity (not sitting, not sustained walking) is detected"""
+        # Reset sitting state
         if self.sitting_start_time is not None:
             sitting_duration = current_time - self.sitting_start_time
             print(f"Activity detected! Was sitting for {sitting_duration/60:.1f} minutes")
+            self.sitting_start_time = None
         
-        self.sitting_start_time = None
+        # Reset walking state if not enough for sustained walking
+        if self.walking_start_time is not None:
+            walking_duration = current_time - self.walking_start_time
+            if walking_duration < WALKING_DETECTION_TIME:
+                self.walking_start_time = None
+        
         self.last_activity_time = current_time
         
         # Stop motor if it's currently running
@@ -126,7 +206,7 @@ class ActivityMonitor(DefaultDelegate):
                 self._stop_motor()
             return
         
-        # Check if we should start the motor
+        # Check if we should start the motor (only when sitting)
         if self.sitting_start_time is not None:
             sitting_duration = current_time - self.sitting_start_time
             
@@ -138,26 +218,45 @@ class ActivityMonitor(DefaultDelegate):
                     self._start_motor(current_time)
 
     def _start_motor(self, current_time):
-        """Start the motor"""
+        """Start the motor (raise)"""
         self.motor_active = True
         self.motor_start_time = current_time
         self.last_motor_activation = current_time
-        self.ser.write(b'1')  # Send motor ON command
-        print(f"MOTOR ACTIVATED at {datetime.now().strftime('%H:%M:%S')}")
+        self.motor_lowered = False  # Reset lowered state when raising
+        self.ser.write(b'1')  # Send motor UP command
+        print(f"MOTOR ACTIVATED (UP) at {datetime.now().strftime('%H:%M:%S')}")
 
     def _stop_motor(self):
         """Stop the motor"""
         self.motor_active = False
         self.motor_start_time = None
-        self.ser.write(b'0')  # Send motor OFF command
+        self.ser.write(b'0')  # Send motor STOP command
         print(f"Motor stopped at {datetime.now().strftime('%H:%M:%S')}")
 
-    def _print_status(self, current_steps, is_sitting):
+    def _lower_motor(self):
+        """Lower the motor due to sustained walking"""
+        self.motor_lowered = True
+        self.ser.write(b'2')  # Send motor DOWN command
+        print(f"MOTOR LOWERED (DOWN) due to walking at {datetime.now().strftime('%H:%M:%S')}")
+        
+        # Reset walking timer to prevent repeated lowering
+        self.walking_start_time = time.time()
+
+    def _print_status(self, current_steps, is_sitting, is_walking):
         """Print current status"""
         current_time = time.time()
         status_time = datetime.now().strftime('%H:%M:%S')
         
-        if is_sitting and self.sitting_start_time:
+        if is_walking and self.walking_start_time:
+            walking_duration = current_time - self.walking_start_time
+            walking_mins = walking_duration / 60
+            
+            if walking_duration >= WALKING_DETECTION_TIME:
+                status = f"WALKING ({walking_mins:.1f} min)"
+            else:
+                remaining = (WALKING_DETECTION_TIME - walking_duration)
+                status = f"Walking ({walking_duration:.0f}s, {remaining:.0f}s until motor down)"
+        elif is_sitting and self.sitting_start_time:
             sitting_duration = current_time - self.sitting_start_time
             sitting_mins = sitting_duration / 60
             
@@ -169,7 +268,7 @@ class ActivityMonitor(DefaultDelegate):
         else:
             status = "Active"
         
-        motor_status = "ON" if self.motor_active else "OFF"
+        motor_status = "UP" if self.motor_active else ("DOWN" if self.motor_lowered else "OFF")
         print(f"[{status_time}] Steps: {current_steps:4d} | {status} | Motor: {motor_status}")
 
     def cleanup(self):
@@ -294,17 +393,19 @@ def scan_devices():
 
 # Main execution
 if __name__ == "__main__":
-    print("BLE Step Counter & Motor Controller")
-    print("=" * 40)
+    print("BLE Step Counter & Motor Controller with Walking Detection")
+    print("=" * 55)
     
     # Show current configuration
     print("Current Settings:")
     print(f"  • Sitting detection window: {SITTING_DETECTION_TIME} seconds")
     print(f"  • Sitting timeout: {SITTING_TIMEOUT/60:.1f} minutes")
+    print(f"  • Walking detection time: {WALKING_DETECTION_TIME} seconds")
+    print(f"  • Walking steps threshold: {WALKING_STEPS_THRESHOLD} steps")
     print(f"  • Motor duration: {MOTOR_ACTIVATION_DURATION} seconds")
     print(f"  • Motor repeat interval: {MOTOR_REPEAT_INTERVAL/60:.1f} minutes")
     print(f"  • Steps threshold: {STEPS_THRESHOLD} steps")
-    print("=" * 40)
+    print("=" * 55)
     
     # Scan for devices first
     scan_devices()
