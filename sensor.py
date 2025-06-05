@@ -13,6 +13,9 @@ arduino_port = "/dev/ttyACM0"
 baud_rate = 9600
 
 ser = serial.Serial(arduino_port, baud_rate)
+
+start_time = 0
+
 print("Conntect to Arduino")
 
 class NotificationDelegate(DefaultDelegate):
@@ -25,6 +28,7 @@ class NotificationDelegate(DefaultDelegate):
 
 	def handleNotification(self, cHandle, data):
 		steps = int.from_bytes(data[0:2], byteorder='little')
+		print(time.time())
 		
 		self.activity.append(steps)
 		if len(self.activity) > self.MAX_ACTIVITY:
