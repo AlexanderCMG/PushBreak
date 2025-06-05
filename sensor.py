@@ -1,6 +1,8 @@
 from bluepy.btle import Scanner, DefaultDelegate, Peripheral, UUID
 import serial
 import time
+import csv
+import os
 from datetime import datetime, timedelta
 
 # =============================================================================
@@ -24,6 +26,9 @@ SITTING_TIMEOUT = 1 * 30     # seconds - how long of sitting before motor starts
 MOTOR_ACTIVATION_DURATION = 1  # seconds - how long motor stays on when activated
 MOTOR_REPEAT_INTERVAL = 1 * 10  # seconds - how often motor activates while still sitting (2 minutes)
 
+# CSV Logging Settings
+CSV_DIRECTORY = "activity_logs"  # Directory where CSV files will be saved
+
 # =============================================================================
 
 # BLE UUIDs
@@ -31,9 +36,10 @@ ACTIVITY_SERVICE_UUID = UUID(BASE_UUID.format(0x2100))
 ACTIVITY_DATA_UUID = UUID(BASE_UUID.format(0x2101))
 
 class ActivityMonitor(DefaultDelegate):
-    def __init__(self, serial_connection):
+    def __init__(self, serial_connection, csv_writer):
         super().__init__()
         self.ser = serial_connection
+        self.csv_writer = csv_writer
         
         # Activity tracking
         self.step_readings = []
@@ -44,6 +50,10 @@ class ActivityMonitor(DefaultDelegate):
         self.motor_active = False
         self.motor_start_time = None
         self.last_motor_activation = None
+        
+        # State tracking for CSV logging
+        self.current_state = "Unknown"  # "Sitting" or "Active"
+        self.state_start_time = time.time()
         
         print("=== Activity Monitor Started ===")
         print(f"Sitting timeout: {SITTING_TIMEOUT/60:.1f} minutes")
@@ -68,16 +78,59 @@ class ActivityMonitor(DefaultDelegate):
         # Check if user is currently sitting
         is_currently_sitting = self._is_sitting()
         
-        if is_currently_sitting:
+        # Handle state changes and log to CSV
+        if is_currently_sitting and self.current_state != "Sitting":
+            self._log_state_change("Sitting", current_time)
             self._handle_sitting_detected(current_time)
-        else:
+        elif not is_currently_sitting and self.current_state != "Active":
+            self._log_state_change("Active", current_time)
             self._handle_activity_detected(current_time)
+        
+        # Continue with existing logic
+        if is_currently_sitting:
+            if self.sitting_start_time is None:
+                self.sitting_start_time = current_time
+        else:
+            if self.sitting_start_time is not None:
+                self.sitting_start_time = None
+                self.last_activity_time = current_time
+                # Stop motor if it's currently running
+                if self.motor_active:
+                    self._stop_motor()
+                # Lower the motor if applicable
+                self._lower_motor()
         
         # Update motor state
         self._update_motor_state(current_time)
 
         # Print status
         self._print_status(steps, is_currently_sitting)
+
+    def _log_state_change(self, new_state, current_time):
+        """Log state change to CSV file"""
+        # Calculate duration of previous state
+        duration_seconds = current_time - self.state_start_time
+        duration_minutes = duration_seconds / 60
+        
+        # Only log if we have a previous state and some duration
+        if self.current_state != "Unknown" and duration_seconds > 5:  # Only log if state lasted more than 5 seconds
+            timestamp = datetime.fromtimestamp(self.state_start_time).strftime('%Y-%m-%d %H:%M:%S')
+            end_timestamp = datetime.fromtimestamp(current_time).strftime('%Y-%m-%d %H:%M:%S')
+            
+            # Write to CSV
+            self.csv_writer.writerow([
+                timestamp,           # Start time
+                end_timestamp,       # End time
+                self.current_state,  # State (Sitting/Active)
+                f"{duration_minutes:.2f}",  # Duration in minutes
+                f"{duration_seconds:.1f}"   # Duration in seconds
+            ])
+            
+            print(f"CSV LOG: {self.current_state} for {duration_minutes:.2f} minutes ({timestamp} to {end_timestamp})")
+        
+        # Update current state
+        self.current_state = new_state
+        self.state_start_time = current_time
 
     def _is_sitting(self):
         """Determine if user is sitting based on recent step data"""
@@ -108,16 +161,6 @@ class ActivityMonitor(DefaultDelegate):
         if self.sitting_start_time is not None:
             sitting_duration = current_time - self.sitting_start_time
             print(f"Activity detected! Was sitting for {sitting_duration/60:.1f} minutes")
-
-        self.sitting_start_time = None
-        self.last_activity_time = current_time
-
-        # Stop motor if it's currently running
-        if self.motor_active:
-            self._stop_motor()
-
-        # Lower the motor if applicable
-        self._lower_motor()
 
     def _update_motor_state(self, current_time):
         """Update motor state based on sitting duration and timing"""
@@ -181,112 +224,167 @@ class ActivityMonitor(DefaultDelegate):
 
     def cleanup(self):
         """Clean up when disconnecting"""
+        # Log final state if program is ending
+        if self.current_state != "Unknown":
+            current_time = time.time()
+            duration_seconds = current_time - self.state_start_time
+            duration_minutes = duration_seconds / 60
+            
+            if duration_seconds > 5:  # Only log if state lasted more than 5 seconds
+                timestamp = datetime.fromtimestamp(self.state_start_time).strftime('%Y-%m-%d %H:%M:%S')
+                end_timestamp = datetime.fromtimestamp(current_time).strftime('%Y-%m-%d %H:%M:%S')
+                
+                self.csv_writer.writerow([
+                    timestamp,
+                    end_timestamp,
+                    self.current_state,
+                    f"{duration_minutes:.2f}",
+                    f"{duration_seconds:.1f}"
+                ])
+                print(f"Final CSV LOG: {self.current_state} for {duration_minutes:.2f} minutes")
+        
         if self.motor_active:
             self._stop_motor()
         print("Activity monitor cleaned up")
+
+def create_csv_file():
+    """Create a new CSV file with timestamp in filename"""
+    # Create directory if it doesn't exist
+    if not os.path.exists(CSV_DIRECTORY):
+        os.makedirs(CSV_DIRECTORY)
+    
+    # Create filename with current timestamp
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename = f"{CSV_DIRECTORY}/activity_log_{timestamp}.csv"
+    
+    # Open CSV file and write header
+    csv_file = open(filename, 'w', newline='')
+    csv_writer = csv.writer(csv_file)
+    
+    # Write header row
+    csv_writer.writerow([
+        'Start Time',
+        'End Time', 
+        'State',
+        'Duration (minutes)',
+        'Duration (seconds)'
+    ])
+    
+    print(f"Created CSV log file: {filename}")
+    return csv_file, csv_writer
 
 def connect_and_monitor(mac_address):
     """Connect to BLE device and start monitoring with retry logic"""
     print(f"Connecting to {mac_address}...")
     
-    # Initialize serial connection
-    ser = None
-    while ser is None:
-        try:
-            ser = serial.Serial(ARDUINO_PORT, BAUD_RATE, timeout=1)
-            time.sleep(2)  # Allow Arduino to initialize
-            print(f"Connected to Arduino on {ARDUINO_PORT}")
-        except Exception as e:
-            print(f"Failed to connect to Arduino: {e}")
-            print("Retrying Arduino connection in 5 seconds...")
-            time.sleep(5)
+    # Create CSV file
+    csv_file, csv_writer = create_csv_file()
     
-    dev = None
-    monitor = None
-    
-    # Keep trying to connect to BLE device until successful
-    while dev is None:
-        try:
-            print(f"Attempting to connect to BLE device {mac_address}...")
-            dev = Peripheral(mac_address, addrType="random")
-            monitor = ActivityMonitor(ser)
-            dev.setDelegate(monitor)
-            
-            print("Discovering services...")
-            dev.getServices()
-            
-            # Enable notifications
-            print("Enabling notifications...")
-            activity_char = dev.getCharacteristics(uuid=ACTIVITY_DATA_UUID)[0]
-            handle = activity_char.getHandle() + 1
-            dev.writeCharacteristic(handle, b'\x01\x00', withResponse=True)
-            
-            print("Connected and monitoring! Press Ctrl+C to stop.")
-            print("-" * 50)
-            
-        except Exception as e:
-            print(f"BLE connection failed: {e}")
-            print("Retrying BLE connection in 10 seconds...")
-            if dev:
-                try:
-                    dev.disconnect()
-                except:
-                    pass
-                dev = None
-            time.sleep(10)
-    
-    # Main monitoring loop with reconnection logic
     try:
-        while True:
+        # Initialize serial connection
+        ser = None
+        while ser is None:
             try:
-                if dev.waitForNotifications(5.0):
-                    continue
-                print(f"[{datetime.now().strftime('%H:%M:%S')}] Waiting for data...")
+                ser = serial.Serial(ARDUINO_PORT, BAUD_RATE, timeout=1)
+                time.sleep(2)  # Allow Arduino to initialize
+                print(f"Connected to Arduino on {ARDUINO_PORT}")
             except Exception as e:
-                print(f"Connection lost: {e}")
-                print("Attempting to reconnect...")
-                try:
-                    dev.disconnect()
-                except:
-                    pass
+                print(f"Failed to connect to Arduino: {e}")
+                print("Retrying Arduino connection in 5 seconds...")
+                time.sleep(5)
+        
+        dev = None
+        monitor = None
+        
+        # Keep trying to connect to BLE device until successful
+        while dev is None:
+            try:
+                print(f"Attempting to connect to BLE device {mac_address}...")
+                dev = Peripheral(mac_address, addrType="random")
+                monitor = ActivityMonitor(ser, csv_writer)
+                dev.setDelegate(monitor)
                 
-                # Try to reconnect
-                dev = None
-                while dev is None:
+                print("Discovering services...")
+                dev.getServices()
+                
+                # Enable notifications
+                print("Enabling notifications...")
+                activity_char = dev.getCharacteristics(uuid=ACTIVITY_DATA_UUID)[0]
+                handle = activity_char.getHandle() + 1
+                dev.writeCharacteristic(handle, b'\x01\x00', withResponse=True)
+                
+                print("Connected and monitoring! Press Ctrl+C to stop.")
+                print("Data will be logged to CSV file.")
+                print("-" * 50)
+                
+            except Exception as e:
+                print(f"BLE connection failed: {e}")
+                print("Retrying BLE connection in 10 seconds...")
+                if dev:
                     try:
-                        print(f"Reconnecting to {mac_address}...")
-                        dev = Peripheral(mac_address, addrType="random")
-                        dev.setDelegate(monitor)
-                        
-                        # Re-enable notifications
-                        activity_char = dev.getCharacteristics(uuid=ACTIVITY_DATA_UUID)[0]
-                        handle = activity_char.getHandle() + 1
-                        dev.writeCharacteristic(handle, b'\x01\x00', withResponse=True)
-                        print("Reconnected successfully!")
-                        
-                    except Exception as reconnect_error:
-                        print(f"Reconnection failed: {reconnect_error}")
-                        print("Retrying in 10 seconds...")
-                        if dev:
-                            try:
-                                dev.disconnect()
-                            except:
-                                pass
-                            dev = None
-                        time.sleep(10)
-            
-    except KeyboardInterrupt:
-        print("\nStopping monitor...")
-    finally:
+                        dev.disconnect()
+                    except:
+                        pass
+                    dev = None
+                time.sleep(10)
+        
+        # Main monitoring loop with reconnection logic
         try:
-            if monitor:
-                monitor.cleanup()
-            if dev:
-                dev.disconnect()
-            ser.close()
-            print("Disconnected from all devices")
-        except:
-            pass
+            while True:
+                try:
+                    if dev.waitForNotifications(5.0):
+                        continue
+                    print(f"[{datetime.now().strftime('%H:%M:%S')}] Waiting for data...")
+                except Exception as e:
+                    print(f"Connection lost: {e}")
+                    print("Attempting to reconnect...")
+                    try:
+                        dev.disconnect()
+                    except:
+                        pass
+                    
+                    # Try to reconnect
+                    dev = None
+                    while dev is None:
+                        try:
+                            print(f"Reconnecting to {mac_address}...")
+                            dev = Peripheral(mac_address, addrType="random")
+                            dev.setDelegate(monitor)
+                            
+                            # Re-enable notifications
+                            activity_char = dev.getCharacteristics(uuid=ACTIVITY_DATA_UUID)[0]
+                            handle = activity_char.getHandle() + 1
+                            dev.writeCharacteristic(handle, b'\x01\x00', withResponse=True)
+                            print("Reconnected successfully!")
+                            
+                        except Exception as reconnect_error:
+                            print(f"Reconnection failed: {reconnect_error}")
+                            print("Retrying in 10 seconds...")
+                            if dev:
+                                try:
+                                    dev.disconnect()
+                                except:
+                                    pass
+                                dev = None
+                            time.sleep(10)
+                
+        except KeyboardInterrupt:
+            print("\nStopping monitor...")
+        finally:
+            try:
+                if monitor:
+                    monitor.cleanup()
+                if dev:
+                    dev.disconnect()
+                ser.close()
+                print("Disconnected from all devices")
+            except:
+                pass
+    
+    finally:
+        # Always close CSV file
+        csv_file.close()
+        print("CSV file saved and closed")
 
 def scan_devices():
     """Scan for available BLE devices"""
@@ -301,8 +399,8 @@ def scan_devices():
 
 # Main execution
 if __name__ == "__main__":
-    print("BLE Step Counter & Motor Controller")
-    print("=" * 40)
+    print("BLE Step Counter & Motor Controller with CSV Logging")
+    print("=" * 55)
     
     # Show current configuration
     print("Current Settings:")
@@ -311,7 +409,8 @@ if __name__ == "__main__":
     print(f"  • Motor duration: {MOTOR_ACTIVATION_DURATION} seconds")
     print(f"  • Motor repeat interval: {MOTOR_REPEAT_INTERVAL/60:.1f} minutes")
     print(f"  • Steps threshold: {STEPS_THRESHOLD} steps")
-    print("=" * 40)
+    print(f"  • CSV files saved to: {CSV_DIRECTORY}/")
+    print("=" * 55)
     
     # Scan for devices first
     scan_devices()
