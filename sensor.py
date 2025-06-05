@@ -1,5 +1,4 @@
 from bluepy.btle import Scanner, DefaultDelegate, Peripheral, UUID
-import struct
 import serial
 import time
 from datetime import datetime, timedelta
@@ -21,9 +20,9 @@ SITTING_DETECTION_TIME = 30  # seconds - how long to monitor for sitting detecti
 STEPS_THRESHOLD = 5          # minimum steps needed to be considered "active"
 
 # Motor Control Settings
-SITTING_TIMEOUT = 5 * 60     # seconds - how long of sitting before motor starts (5 minutes)
-MOTOR_ACTIVATION_DURATION = 10  # seconds - how long motor stays on when activated
-MOTOR_REPEAT_INTERVAL = 2 * 60  # seconds - how often motor activates while still sitting (2 minutes)
+SITTING_TIMEOUT = 1 * 30     # seconds - how long of sitting before motor starts (5 minutes)
+MOTOR_ACTIVATION_DURATION = 1  # seconds - how long motor stays on when activated
+MOTOR_REPEAT_INTERVAL = 1 * 10  # seconds - how often motor activates while still sitting (2 minutes)
 
 # =============================================================================
 
@@ -76,7 +75,7 @@ class ActivityMonitor(DefaultDelegate):
         
         # Update motor state
         self._update_motor_state(current_time)
-        
+
         # Print status
         self._print_status(steps, is_currently_sitting)
 
@@ -84,18 +83,18 @@ class ActivityMonitor(DefaultDelegate):
         """Determine if user is sitting based on recent step data"""
         if len(self.step_readings) < 2:
             return True
-        
+
         # Calculate step difference over the monitoring period
         oldest_reading = min(self.step_readings, key=lambda x: x['timestamp'])
         newest_reading = max(self.step_readings, key=lambda x: x['timestamp'])
-        
+
         step_difference = newest_reading['steps'] - oldest_reading['steps']
         time_difference = newest_reading['timestamp'] - oldest_reading['timestamp']
-        
+
         # Only consider it sitting if we have enough data and low step count
         if time_difference >= SITTING_DETECTION_TIME * 0.8:  # At least 80% of monitoring window
             return step_difference < STEPS_THRESHOLD
-        
+
         return False
 
     def _handle_sitting_detected(self, current_time):
@@ -109,31 +108,34 @@ class ActivityMonitor(DefaultDelegate):
         if self.sitting_start_time is not None:
             sitting_duration = current_time - self.sitting_start_time
             print(f"Activity detected! Was sitting for {sitting_duration/60:.1f} minutes")
-        
+
         self.sitting_start_time = None
         self.last_activity_time = current_time
-        
+
         # Stop motor if it's currently running
         if self.motor_active:
             self._stop_motor()
 
+        # Lower the motor if applicable
+        self._lower_motor()
+
     def _update_motor_state(self, current_time):
         """Update motor state based on sitting duration and timing"""
-        
+
         # If motor is currently active, check if it should stop
         if self.motor_active:
             if current_time - self.motor_start_time >= MOTOR_ACTIVATION_DURATION:
                 self._stop_motor()
             return
-        
+
         # Check if we should start the motor
         if self.sitting_start_time is not None:
             sitting_duration = current_time - self.sitting_start_time
-            
+
             # Start motor if sitting too long
             if sitting_duration >= SITTING_TIMEOUT:
                 # Check if enough time has passed since last activation
-                if (self.last_motor_activation is None or 
+                if (self.last_motor_activation is None or
                     current_time - self.last_motor_activation >= MOTOR_REPEAT_INTERVAL):
                     self._start_motor(current_time)
 
@@ -151,6 +153,11 @@ class ActivityMonitor(DefaultDelegate):
         self.motor_start_time = None
         self.ser.write(b'0')  # Send motor OFF command
         print(f"Motor stopped at {datetime.now().strftime('%H:%M:%S')}")
+
+    def _lower_motor(self):
+        """Lower the motor (if applicable)"""
+        self.ser.write(b'2')
+        print(f"Motor lowered at {datetime.now().strftime('%H:%M:%S')}")
 
     def _print_status(self, current_steps, is_sitting):
         """Print current status"""
