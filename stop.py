@@ -30,7 +30,7 @@ def connect_to_arduino():
 def lower_motor(ser):
     """Send command to lower the motor"""
     try:
-        ser.write(b'1')  # Send motor ON/lower command
+        ser.write(b'2')  # Send motor ON/lower command
         timestamp = datetime.now().strftime('%H:%M:%S')
         print(f"[{timestamp}] ✓ Motor lowered")
         return True

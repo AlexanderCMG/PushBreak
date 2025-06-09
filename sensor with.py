@@ -22,9 +22,9 @@ SITTING_DETECTION_TIME = 30  # seconds - how long to monitor for sitting detecti
 STEPS_THRESHOLD = 5          # minimum steps needed to be considered "active"
 
 # Motor Control Settings
-SITTING_TIMEOUT = 1 * 30     # seconds - how long of sitting before motor starts (5 minutes)
+SITTING_TIMEOUT = 1     # seconds - how long of sitting before motor starts (5 minutes)
 MOTOR_ACTIVATION_DURATION = 1  # seconds - how long motor stays on when activated
-MOTOR_REPEAT_INTERVAL = 1 * 10  # seconds - how often motor activates while still sitting (2 minutes)
+MOTOR_REPEAT_INTERVAL = 1 * 60  # seconds - how often motor activates while still sitting (2 minutes)
 
 # CSV Logging Settings
 CSV_DIRECTORY = "activity_logs"  # Directory where CSV files will be saved
