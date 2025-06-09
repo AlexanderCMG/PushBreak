@@ -249,7 +249,9 @@ async function endSession() {
     const sessionEndTime = Date.now();
     await logDataToSupabase(sessionEndTime);
 
-    if (currentSession < 6) {
+    if (alternate && currentSession < 13) {
+        startBreak();
+    } else if (currentSession <6) {
         startBreak();
     } else {
         showCompletion();
