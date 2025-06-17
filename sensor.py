@@ -13,7 +13,7 @@ ARDUINO_PORT = "/dev/ttyACM0"
 BAUD_RATE = 9600
 
 # Motor Control Settings
-SITTING_TIMEOUT = 5 * 60 * 0 + 30    # seconds - how long of sitting before motor starts (30 seconds for testing)
+SITTING_TIMEOUT = 5 * 60 + 30    # seconds - how long of sitting before motor starts (30 seconds for testing)
 MOTOR_ACTIVATION_DURATION = 2  # seconds - how long motor stays on when activated
 MOTOR_REPEAT_INTERVAL = 1 * 60  # seconds - how often motor activates while still sitting (10 seconds for testing)
 
@@ -185,7 +185,7 @@ def start_monitoring():
             while True:
                 monitor.update_motor_state()
                 monitor.print_status()
-                time.sleep(1)  # Update every 5 seconds
+                time.sleep(2.5)  # Update every 5 seconds
                 
         except KeyboardInterrupt:
             print("\nStopping monitor...")
