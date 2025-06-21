@@ -24,6 +24,9 @@ def format_duration(total_seconds):
 TIME_TILL_NUDGE = 330
 duration_array = np.array(df['duration_seconds'] - TIME_TILL_NUDGE)
 
+for participant in range(len(duration_array)):
+    print(f"Participant {participant + 1}: {format_duration(duration_array[participant])}")
+
 # Calculate statistics
 # =======================================
 # The mean duration
