@@ -62,8 +62,8 @@ sb.regplot(data=df_melted, x='session_num', y='cpm',
             ci=95, ax=ax)
 
 # Customize the plot
-ax.set_xlabel('Session Number', fontsize=14, fontweight='bold')
-ax.set_ylabel('Characters per minute (CPM)', fontsize=14, fontweight='bold')
+ax.set_xlabel('Session Number', fontsize=16, fontweight='bold')
+ax.set_ylabel('Characters per minute (CPM)', fontsize=16, fontweight='bold')
 # ax.set_title('CPM Performance Across Sessions\nwith Linear Regression and 95% Confidence Interval',
 #              fontsize=16, fontweight='bold', pad=20)
 
@@ -73,6 +73,9 @@ ax.set_xticklabels([str(i) for i in range(1, 7)])
 
 # # Add grid for better readability
 # ax.grid(True, alpha=0.3, linestyle='--')
+
+# Add a vertical line at session 2.5
+ax.axvline(x=2.5, color=grey, linestyle='--', linewidth=1.5)
 
 # Add statistics box
 stats_text = f'τ = {correlation:.3f}\np = {p:.3f}'

@@ -66,11 +66,11 @@ teal = palette[9]
 
 
 plt.figure(figsize=(8, 10))
-sb.boxplot(y=duration_array/60, color=blue, width=0.5)
+sb.boxplot(y=duration_array/60, color=teal, width=0.5)
 
 # Customize the plot
-plt.title('Time spent seated after first nudge', fontsize=24, fontweight='bold')
-plt.ylabel('Duration (minutes)', fontsize=16)
+# plt.title('Time spent seated after first nudge', fontsize=24, fontweight='bold')
+plt.ylabel('Duration (minutes)', fontsize=16, fontweight='bold')
 # plt.grid(True, alpha=0.3)
 max_y = np.max(duration_array) / 60
 plt.xticks([])
@@ -82,7 +82,7 @@ plt.axhline(y=mean_duration/60, color=red, linestyle='--', alpha=0.8, label=f'Me
 plt.axhline(y=ci_lower/60, color=orange, linestyle=':', alpha=0.8, label=f'95% CI Lower: {format_duration(ci_lower)}')
 plt.axhline(y=ci_upper/60, color=orange, linestyle=':', alpha=0.8, label=f'95% CI Upper: {format_duration(ci_upper)}')
 
-plt.legend(loc='upper right', fontsize=12)
+plt.legend(loc='upper right', fontsize=13, edgecolor=purple)
 plt.tight_layout()
 
 # Save the plot as a PNG file
