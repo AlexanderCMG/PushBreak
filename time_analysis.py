@@ -83,4 +83,4 @@ plt.legend(loc='upper right', fontsize=12)
 plt.tight_layout()
 
 # Save the plot as a PNG file
-plt.savefig("plots/time_seated.png", dpi=1000, bbox_inches='tight')
+plt.savefig("plots/time_seated.png", dpi=600, bbox_inches='tight')
