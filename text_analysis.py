@@ -72,14 +72,19 @@ def main():
     cpm_df.to_csv(output_filename, index=False)
     print(f"\nResults saved to: {output_filename}")
 
+    #print the average CPM per participant
+    average_cpm = cpm_df.mean(axis=1)
+    print("\nAverage CPM per participant:")
+    print(average_cpm)
+
     # Optional: Display summary statistics
-    print("\nSummary Statistics:")
-    session_columns = [col for col in cpm_df.columns if col.startswith('session_')]
-    for col in session_columns:
-        if col in cpm_df.columns:
-            mean_cpm = cpm_df[col].mean()
-            std_cpm = cpm_df[col].std()
-            print(f"{col}: Mean = {mean_cpm:.2f}, Std = {std_cpm:.2f}")
+    # print("\nSummary Statistics:")
+    # session_columns = [col for col in cpm_df.columns if col.startswith('session_')]
+    # for col in session_columns:
+    #     if col in cpm_df.columns:
+    #         mean_cpm = cpm_df[col].mean()
+    #         std_cpm = cpm_df[col].std()
+    #         print(f"{col}: Mean = {mean_cpm:.2f}, Std = {std_cpm:.2f}")
 
 if __name__ == "__main__":
     main()

@@ -71,7 +71,7 @@ sb.boxplot(y=duration_array/60, color=blue, width=0.5)
 # Customize the plot
 plt.title('Time spent seated after first nudge', fontsize=24, fontweight='bold')
 plt.ylabel('Duration (minutes)', fontsize=16)
-plt.grid(True, alpha=0.3)
+# plt.grid(True, alpha=0.3)
 max_y = np.max(duration_array) / 60
 plt.xticks([])
 plt.yticks(range(0, int(max_y) + 2, 1))
