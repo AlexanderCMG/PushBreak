@@ -2,30 +2,23 @@ import pandas as pd
 
 
 def import_data():
-    # === Step 1: Load the CSV ===
-    file_path = "PushBreak_June+20,+2025_01.58.csv"
+    file_path = "csv/PushBreak_June+20,+2025_01.58.csv"
     df_raw = pd.read_csv(file_path)
-
-    # === Step 2: Extract question labels (row 0) ===
     question_labels = df_raw.iloc[0]
 
-    # === Step 3: Extract response data (from row 2 onwards) ===
     df_responses = df_raw.iloc[2:].reset_index(drop=True)
     df_responses.columns = question_labels
 
-    # === Step 4: Drop metadata columns (optional) ===
     df_responses = df_responses.loc[:, ~df_responses.columns.str.contains(
         'Unnamed|Response ID|Recipient|Start Date|End Date|Response Type|Progress|Duration|Finished|Recorded|Location|UserLanguage|IP Address|External Data Reference|Distribution Channel|User Language|Do you agree to the details set out in the consent form?',
         case=False
     )]
 
-    # === Step 5: Create dictionary: {question text: [responses]} ===
     question_data = {
         question: df_responses[question].tolist()
         for question in df_responses.columns
     }
 
-    # === Done! You can now use `question_data` in your analysis ===
     for key, value in question_data.items():
         print(f"{key}: {value}")
 
