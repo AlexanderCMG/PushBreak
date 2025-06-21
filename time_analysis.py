@@ -81,7 +81,6 @@ plt.axhline(y=ci_upper/60, color=orange, linestyle=':', alpha=0.8, label=f'95% C
 
 plt.legend(loc='upper right', fontsize=12)
 plt.tight_layout()
-plt.show()
 
 # Save the plot as a PNG file
-plt.savefig("plots/time_seated.png", dpi=500, bbox_inches='tight')
+plt.savefig("plots/time_seated.png", dpi=1000, bbox_inches='tight')
